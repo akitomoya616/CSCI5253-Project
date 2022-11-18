@@ -55,19 +55,108 @@ minioClient = Minio(minioHost,
                secret_key=minioPasswd)
 
 bucketname='CSCI5253-Project'
+sqldatabasename = 'TEST_DB'#'project_database'
 
 
-print("connecting with MySQL server")
+print("connecting to MySQL server...\n")
+
 mydb = mysql.connector.connect(
-  host="localhost",
-  user="root",
-  password="test1234"
-)
+        host="localhost",
+        user="root",
+        password="test1234")
 
-mycursor = mydb.cursor()
+mycursor = mydb.cursor() # mycursor now reference to the whole sql server
+print("Successfully connected to the SQL database!\n")
 
-mycursor.execute("CREATE DATABASE project_database")
-print("successfully connected with MySQL server!")
+mycursor.execute("CREATE DATABASE IF NOT EXISTS " + sqldatabasename)
+
+print("Current databases in the SQL server are:")
+mycursor.execute("SHOW DATABASES")
+for x in mycursor:
+  print(x)
+print()
+
+# connect to the specific database
+mydb = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="test1234",
+        database=sqldatabasename)
+print("Successfully connected to: " + sqldatabasename + "!\n")
+
+mycursor = mydb.cursor() # mycursor now reference to the database we pointed to
+
+# create the table we need if it not exits
+mycursor.execute("CREATE TABLE if not exists customers (name VARCHAR(255), address VARCHAR(255))")
+
+print("Tables in the current database:")
+mycursor.execute("SHOW TABLES")
+for x in mycursor:
+  print(x)
+print()
+
+# intert data into the table
+print("Now start adding value into the table!")
+sql = "INSERT INTO customers (name, address) VALUES (%s, %s)"
+val = [
+  ('Peter', 'Lowstreet 4'),
+  ('Amy', 'Apple st 652'),
+  ('Hannah', 'Mountain 21'),
+  ('Michael', 'Valley 345'),
+  ('Sandy', 'Ocean blvd 2'),
+  ('Betty', 'Green Grass 1'),
+  ('Richard', 'Sky st 331'),
+  ('Susan', 'One way 98'),
+  ('Vicky', 'Yellow Garden 2'),
+  ('Ben', 'Park Lane 38'),
+  ('William', 'Central st 954'),
+  ('Chuck', 'Main Road 989'),
+  ('Viola', 'Sideway 1633')
+]
+mycursor.executemany(sql, val) # use mycursor.execute(sql, val) if we only have 1 line val
+mydb.commit()
+print(mycursor.rowcount, "record inserted.\n")
+
+# print all data in the table
+mycursor.execute("SELECT * FROM customers")
+myresult = mycursor.fetchall()
+print("Now value in the table are:")
+for x in myresult:
+  print(x)
+print()
+
+# drop the table we created
+print("drop the current table!\n")
+sql = "DROP TABLE customers"
+mycursor.execute(sql)
+
+print("Tables in the current database:")
+mycursor.execute("SHOW TABLES")
+for x in mycursor:
+  print(x)
+print()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # method definition: by mentioning "GET", "POST", "DELETE" in methods=[], we allow the client side (in our case it is the rest-client.py)
 # to have the corresponding ability to call requests.get/post/delete
