@@ -55,7 +55,9 @@ minioClient = Minio(minioHost,
                secret_key=minioPasswd)
 
 bucketname='CSCI5253-Project'
-sqldatabasename = 'TEST_DB'#'project_database'
+
+sqldatabasename = 'TEST_DB' #'project_database'
+tablename = 'customer'
 
 
 print("connecting to MySQL server...\n")
@@ -87,7 +89,7 @@ print("Successfully connected to: " + sqldatabasename + "!\n")
 mycursor = mydb.cursor() # mycursor now reference to the database we pointed to
 
 # create the table we need if it not exits
-mycursor.execute("CREATE TABLE if not exists customers (name VARCHAR(255), address VARCHAR(255))")
+mycursor.execute("CREATE TABLE if not exists " + tablename + " (name VARCHAR(255), address VARCHAR(255))")
 
 print("Tables in the current database:")
 mycursor.execute("SHOW TABLES")
@@ -97,7 +99,7 @@ print()
 
 # intert data into the table
 print("Now start adding value into the table!")
-sql = "INSERT INTO customers (name, address) VALUES (%s, %s)"
+sql = "INSERT INTO " + tablename + " (name, address) VALUES (%s, %s)"
 val = [
   ('Peter', 'Lowstreet 4'),
   ('Amy', 'Apple st 652'),
@@ -118,7 +120,7 @@ mydb.commit()
 print(mycursor.rowcount, "record inserted.\n")
 
 # print all data in the table
-mycursor.execute("SELECT * FROM customers")
+mycursor.execute("SELECT * FROM " + tablename)
 myresult = mycursor.fetchall()
 print("Now value in the table are:")
 for x in myresult:
@@ -127,7 +129,7 @@ print()
 
 # drop the table we created
 print("drop the current table!\n")
-sql = "DROP TABLE customers"
+sql = "DROP TABLE " + tablename
 mycursor.execute(sql)
 
 print("Tables in the current database:")
