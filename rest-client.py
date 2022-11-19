@@ -26,7 +26,6 @@ def mkReq(reqmethod, endpoint, data, verbose=True):
     jsonData = jsonpickle.encode(data)
     if verbose and data != None:
         print(f"Make request http://{REST}/{endpoint} with json {data.keys()}")
-        print(f"mp3 is of type {type(data['mp3'])} and length {len(data['mp3'])} ")
     response = reqmethod(f"http://{REST}/{endpoint}", data=jsonData,
                          headers={'Content-type': 'application/json'})
     if response.status_code == 200:
@@ -38,30 +37,13 @@ def mkReq(reqmethod, endpoint, data, verbose=True):
             f"response code is {response.status_code}, raw response is {response.text}")
         return response.text
 
-
-# for mp3 in glob.glob("data/short*mp3"):
-#     print(f"Separate data/{mp3}")
-#     mkReq(requests.post, "apiv1/separate",
-#         data={
-#             "mp3": base64.b64encode( open(mp3, "rb").read() ).decode('utf-8'),
-#             "callback": {
-#                 "url": "http://localhost:5000",
-#                 "data": {"mp3": mp3, 
-#                          "data": "to be returned"}
-#             }
-#         },
-#         verbose=True
-#         )
-#     print(f"Cache from server is")
-#     mkReq(requests.get, "apiv1/queue", data=None)
-
 for shopping_data in glob.glob("data/*json"):
-    print(f"Grab data/{shopping_data}")
+    print(f"Grab {shopping_data}")
     print('sending shopping data to REST server...')
     # send the json data here
-    mkReq(requests.post, "apiv1/separate",
+    mkReq(requests.post, "apiv1/send",
         data={
-            "shopping": shopping_data,
+            "shopping": base64.b64encode( open(shopping_data, "rb").read() ).decode('utf-8'),
             "callback": {
                 "url": "http://localhost:5000",
                 "data": {"shopping": 'this is the shopping data under callback!', 
@@ -71,10 +53,8 @@ for shopping_data in glob.glob("data/*json"):
         verbose=True
         )
     # check current data in redis
-    print('current REDIS database contains the following data:')
-    mkReq(requests.get, "apiv1/queue", data=None)
-
-    i += 1
+    # print('current REDIS database contains the following data:')
+    # mkReq(requests.get, "apiv1/queue", data=None)
     # send the next data after 1 second
     time.sleep(1)
 

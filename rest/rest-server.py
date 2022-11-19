@@ -89,93 +89,73 @@ print("Successfully connected to: " + sqldatabasename + "!\n")
 mycursor = mydb.cursor() # mycursor now reference to the database we pointed to
 
 # create the table we need if it not exits
-mycursor.execute("CREATE TABLE if not exists " + tablename + " (name VARCHAR(255), address VARCHAR(255))")
+mycursor.execute("CREATE TABLE if not exists " + tablename + " (name VARCHAR(255), product VARCHAR(255), date VARCHAR(255))")
 
 print("Tables in the current database:")
 mycursor.execute("SHOW TABLES")
 for x in mycursor:
   print(x)
 print()
-
-# intert data into the table
-print("Now start adding value into the table!")
-sql = "INSERT INTO " + tablename + " (name, address) VALUES (%s, %s)"
-val = [
-  ('Peter', 'Lowstreet 4'),
-  ('Amy', 'Apple st 652'),
-  ('Hannah', 'Mountain 21'),
-  ('Michael', 'Valley 345'),
-  ('Sandy', 'Ocean blvd 2'),
-  ('Betty', 'Green Grass 1'),
-  ('Richard', 'Sky st 331'),
-  ('Susan', 'One way 98'),
-  ('Vicky', 'Yellow Garden 2'),
-  ('Ben', 'Park Lane 38'),
-  ('William', 'Central st 954'),
-  ('Chuck', 'Main Road 989'),
-  ('Viola', 'Sideway 1633')
-]
-mycursor.executemany(sql, val) # use mycursor.execute(sql, val) if we only have 1 line val
-mydb.commit()
-print(mycursor.rowcount, "record inserted.\n")
 
 # print all data in the table
-mycursor.execute("SELECT * FROM " + tablename)
-myresult = mycursor.fetchall()
-print("Now value in the table are:")
-for x in myresult:
-  print(x)
-print()
+# mycursor.execute("SELECT * FROM " + tablename)
+# myresult = mycursor.fetchall()
+# print("Now value in the table are:")
+# for x in myresult:
+#   print(x)
+# print()
 
 # drop the table we created
-print("drop the current table!\n")
-sql = "DROP TABLE " + tablename
-mycursor.execute(sql)
+# print("drop the current table!\n")
+# sql = "DROP TABLE " + tablename
+# mycursor.execute(sql)
 
 print("Tables in the current database:")
 mycursor.execute("SHOW TABLES")
 for x in mycursor:
   print(x)
 print()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 # method definition: by mentioning "GET", "POST", "DELETE" in methods=[], we allow the client side (in our case it is the rest-client.py)
 # to have the corresponding ability to call requests.get/post/delete
 # route http posts to this method
-@app.route('/apiv1/separate', methods=['POST'])
+@app.route('/apiv1/send', methods=['POST'])
 def takeMp3():
     r = request
     try:
-        mp3_string = json.loads(r.data)['mp3'] # get the mp3 hash value from disctionary file transferred from JSON file
-        mp3_data = base64.b64decode(mp3_string) # decode the music here that was encoded in client side
-        mp3_filename = json.loads(r.data)['callback']['data']['mp3'] # actual hash for the mp3 file
-        len_of_mp3 = len(mp3_string)
+        shopping_data_encoded = json.loads(r.data)['shopping']
+        shopping_data_decoded = base64.b64decode(shopping_data_encoded) # this decoded data is in bytes but not in dict since we used json.loads on the encoded file but not the decoded one
+        shopping_data = json.loads(shopping_data_decoded) # therefore we need to load it again to get dict type file
+
+        # intert data into the table
+        print("Now start adding value into the table!")
+        sql = "INSERT INTO " + tablename + " (name, product, date) VALUES (%s, %s, %s)"
+        val = [
+            (shopping_data['name'], shopping_data['product'], shopping_data['date'])
+        ]
+        mycursor.executemany(sql, val) # use mycursor.execute(sql, val) if we have one line of val to put
+        mydb.commit()
+        print(mycursor.rowcount, "record inserted.\n")
+
+        # print all data in the table
+        mycursor.execute("SELECT * FROM " + tablename)
+        myresult = mycursor.fetchall()
+        print("Now value in the table are:")
+        for x in myresult:
+          print(x)
+        print()
+
+        response = {
+            'status' : "got it!",
+            'shopping data' : shopping_data
+        }
 
 
     except Exception as e:
         print(e) # print the error report if we faced the exception
-        response = {'not working!, error: ' + str(e)}
+        response = {'Failed to take data! Error: ' + str(e)}
+
+    
 
     response_pickled = jsonpickle.encode(response)
     return Response(response=response_pickled, status=200, mimetype="application/json")
