@@ -86,7 +86,7 @@ mydb = mysql.connector.connect(
         database=sqldatabasename)
 print("Successfully connected to: " + sqldatabasename + "!\n")
 
-mycursor = mydb.cursor() # mycursor now reference to the database we pointed to
+mycursor = mydb.cursor() # mycursor now reference to the database table we pointed to
 
 # create the table we need if it not exits
 mycursor.execute("CREATE TABLE if not exists " + tablename + " (name VARCHAR(255), product VARCHAR(255), date VARCHAR(255))")
@@ -137,25 +137,37 @@ def takeMp3():
         mydb.commit()
         print(mycursor.rowcount, "record inserted.\n")
 
-        # print all data in the table
-        mycursor.execute("SELECT * FROM " + tablename)
-        myresult = mycursor.fetchall()
-        print("Now value in the table are:")
-        for x in myresult:
-          print(x)
-        print()
-
         response = {
             'status' : "got it!",
             'shopping data' : shopping_data
         }
 
-
     except Exception as e:
         print(e) # print the error report if we faced the exception
         response = {'Failed to take data! Error: ' + str(e)}
 
-    
+    response_pickled = jsonpickle.encode(response)
+    return Response(response=response_pickled, status=200, mimetype="application/json")
+
+@app.route('/apiv1/sqlqueue', methods=['GET'])
+def showSQLQueue():
+    # get the list of data stored in sql database's table now
+    # and return it back to client
+    r = request
+
+    # add all data in the table to element array
+    mycursor.execute("SELECT * FROM " + tablename)
+    myresult = mycursor.fetchall()
+    element = []
+    for x in myresult:
+        element.append(str(x))
+
+    try:
+        response = element
+
+    except Exception as e:
+        print(e) # print the error report if we faced the exception
+        response = {'Failed to load data from the table in SQL database'}
 
     response_pickled = jsonpickle.encode(response)
     return Response(response=response_pickled, status=200, mimetype="application/json")

@@ -55,6 +55,11 @@ for shopping_data in glob.glob("data/*json"):
     # check current data in redis
     # print('current REDIS database contains the following data:')
     # mkReq(requests.get, "apiv1/queue", data=None)
+
+    # check current data in sql
+    print('current table in SQL database contains the following data:')
+    mkReq(requests.get, "apiv1/sqlqueue", data=None)
+    
     # send the next data after 1 second
     time.sleep(1)
 
