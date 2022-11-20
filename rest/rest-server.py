@@ -172,6 +172,34 @@ def showSQLQueue():
     response_pickled = jsonpickle.encode(response)
     return Response(response=response_pickled, status=200, mimetype="application/json")
 
+@app.route('/apiv1/sort/<string:orderByValue>/<string:asc_desc>', methods=['GET'])
+def sortSQLQueue(orderByValue, asc_desc):
+    # get the list of data stored in sql database's table now
+    # and return it back to client in sorted order
+    r = request
+
+    # add all data in the table to element array
+    mycursor.execute(f"SELECT * FROM {tablename} ORDER BY {orderByValue} {asc_desc}")
+    myresult = mycursor.fetchall()
+    element = []
+    for x in myresult:
+        element.append(str(x))
+
+    try:
+        response = element
+
+    except Exception as e:
+        print(e) # print the error report if we faced the exception
+        response = {'Failed to load data from the table in SQL database'}
+
+    response_pickled = jsonpickle.encode(response)
+    return Response(response=response_pickled, status=200, mimetype="application/json")
+
+
+
+
+
+
 @app.route('/apiv1/queue', methods=['GET'])
 def showQueue(): # dump the queued entries from the Redis database
     # get the list of files stored in radis now

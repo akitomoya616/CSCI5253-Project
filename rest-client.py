@@ -8,7 +8,6 @@ import base64
 import glob
 import time
 
-
 #
 # Use localhost & port 5000 if not specified by environment variable REST
 #
@@ -41,27 +40,31 @@ for shopping_data in glob.glob("data/*json"):
     print(f"Grab {shopping_data}")
     print('sending shopping data to REST server...')
     # send the json data here
-    mkReq(requests.post, "apiv1/send",
-        data={
-            "shopping": base64.b64encode( open(shopping_data, "rb").read() ).decode('utf-8'),
-            "callback": {
-                "url": "http://localhost:5000",
-                "data": {"shopping": 'this is the shopping data under callback!', 
-                         "data": "to be returned"}
-            }
-        },
-        verbose=True
-        )
+    # mkReq(requests.post, "apiv1/send",
+    #     data={
+    #         "shopping": base64.b64encode( open(shopping_data, "rb").read() ).decode('utf-8'),
+    #         "callback": {
+    #             "url": "http://localhost:5000",
+    #             "data": {"shopping": 'this is the shopping data under callback!', 
+    #                      "data": "to be returned"}
+    #         }
+    #     },
+    #     verbose=True
+    #     )
     # check current data in redis
     # print('current REDIS database contains the following data:')
     # mkReq(requests.get, "apiv1/queue", data=None)
-
-    # check current data in sql
-    print('current table in SQL database contains the following data:')
-    mkReq(requests.get, "apiv1/sqlqueue", data=None)
     
     # send the next data after 1 second
     time.sleep(1)
+
+# check current data in sql
+print('current table in SQL database contains the following data:')
+mkReq(requests.get, "apiv1/sqlqueue", data=None)
+
+# get all data sorted by date
+print('all data from newest to oldest:')
+mkReq(requests.get, "apiv1/sort/date/DESC", data=None)
 
 # do two more requests:
 # now we can only do the following 2 tests in short but not in sample-requests.py
