@@ -100,13 +100,15 @@ print()
 # method definition: by mentioning "GET", "POST", "DELETE" in methods=[], we allow the client side (in our case it is the rest-client.py)
 # to have the corresponding ability to call requests.get/post/delete
 # route http posts to this method
-@app.route('/apiv1/send', methods=['POST'])
-def takeMp3():
+@app.route('/apiv1/add', methods=['POST'])
+def addData():
     r = request
     try:
         shopping_data_encoded = json.loads(r.data)['shopping']
-        shopping_data_decoded = base64.b64decode(shopping_data_encoded) # this decoded data is in bytes but not in dict since we used json.loads on the encoded file but not the decoded one
-        shopping_data = json.loads(shopping_data_decoded) # therefore we need to load it again to get dict type file
+        shopping_data_decoded = base64.b64decode(shopping_data_encoded) 
+        # this decoded data from above is in bytes but not in dict since we used json.loads on the encoded file but not the decoded one
+        # therefore we need to load it again to get dict type file
+        shopping_data = json.loads(shopping_data_decoded) 
 
         # assign a id to the current data based on the input order into the table
         mycursor.execute(f"SELECT COUNT(*) FROM {tablename}")

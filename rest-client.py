@@ -40,7 +40,7 @@ for shopping_data in glob.glob("data/*json"):
     print(f"Grab {shopping_data}")
     print('sending shopping data to REST server...')
     # send the json data here
-    mkReq(requests.post, "apiv1/send",
+    mkReq(requests.post, "apiv1/add",
         data={
             "shopping": base64.b64encode( open(shopping_data, "rb").read() ).decode('utf-8'),
             "callback": {
