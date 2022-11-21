@@ -56,22 +56,21 @@ minioClient = Minio(minioHost,
 
 bucketname='CSCI5253-Project'
 
+# set sql database and table value for later use
 sqldatabasename = 'TEST_DB' #'project_database'
 tablename = 'customer'
 
-
+# connect to SQL server
 print("connecting to MySQL server...\n")
-
 mydb = mysql.connector.connect(
         host="localhost",
         user="root",
         password="test1234")
-
 mycursor = mydb.cursor() # mycursor now reference to the whole sql server
 print("Successfully connected to the SQL database!\n")
 
+# create a database in this SQL server
 mycursor.execute("CREATE DATABASE IF NOT EXISTS " + sqldatabasename)
-
 print("Current databases in the SQL server are:")
 mycursor.execute("SHOW DATABASES")
 for x in mycursor:
@@ -88,27 +87,8 @@ print("Successfully connected to: " + sqldatabasename + "!\n")
 
 mycursor = mydb.cursor() # mycursor now reference to the database table we pointed to
 
-# create the table we need if it not exits
-mycursor.execute("CREATE TABLE if not exists " + tablename + " (name VARCHAR(255), product VARCHAR(255), date VARCHAR(255))")
-
-print("Tables in the current database:")
-mycursor.execute("SHOW TABLES")
-for x in mycursor:
-  print(x)
-print()
-
-# print all data in the table
-# mycursor.execute("SELECT * FROM " + tablename)
-# myresult = mycursor.fetchall()
-# print("Now value in the table are:")
-# for x in myresult:
-#   print(x)
-# print()
-
-# drop the table we created
-# print("drop the current table!\n")
-# sql = "DROP TABLE " + tablename
-# mycursor.execute(sql)
+# create the table we need if it does not exist with all column names and data types
+mycursor.execute(f"CREATE TABLE if not exists {tablename} (ID INT, Name VARCHAR(255), Product VARCHAR(255), Price INT, Date VARCHAR(255))")
 
 print("Tables in the current database:")
 mycursor.execute("SHOW TABLES")
@@ -127,11 +107,18 @@ def takeMp3():
         shopping_data_decoded = base64.b64decode(shopping_data_encoded) # this decoded data is in bytes but not in dict since we used json.loads on the encoded file but not the decoded one
         shopping_data = json.loads(shopping_data_decoded) # therefore we need to load it again to get dict type file
 
+        # assign a id to the current data based on the input order into the table
+        mycursor.execute(f"SELECT COUNT(*) FROM {tablename}")
+        myresult = mycursor.fetchall() # return in form as [(value,)], shows the current number of rows in table
+        id = myresult[0][0] + 1 # [0][0] to get that value from returned list, which is the last row's id, 
+                                # +1 to get current row's id that we are going to add into the table
+
         # intert data into the table
         print("Now start adding value into the table!")
-        sql = "INSERT INTO " + tablename + " (name, product, date) VALUES (%s, %s, %s)"
+        # why use %s but not %d for integer values id and price as placeholder: https://stackoverflow.com/questions/20818155/not-all-parameters-were-used-in-the-sql-statement-python-mysql
+        sql = f"INSERT INTO {tablename} (ID, Name, Product, Price, Date) VALUES (%s, %s, %s, %s, %s)"
         val = [
-            (shopping_data['name'], shopping_data['product'], shopping_data['date'])
+            (id, shopping_data['name'], shopping_data['product'], shopping_data['price'], shopping_data['date'])
         ]
         mycursor.executemany(sql, val) # use mycursor.execute(sql, val) if we have one line of val to put
         mydb.commit()
@@ -156,7 +143,7 @@ def showSQLQueue():
     r = request
 
     # add all data in the table to element array
-    mycursor.execute("SELECT * FROM " + tablename)
+    mycursor.execute(f"SELECT * FROM {tablename}")
     myresult = mycursor.fetchall()
     element = []
     for x in myresult:
@@ -167,7 +154,7 @@ def showSQLQueue():
 
     except Exception as e:
         print(e) # print the error report if we faced the exception
-        response = {'Failed to load data from the table in SQL database'}
+        response = {'Failed to load data from the table in SQL database.'}
 
     response_pickled = jsonpickle.encode(response)
     return Response(response=response_pickled, status=200, mimetype="application/json")
@@ -190,7 +177,47 @@ def sortSQLQueue(orderByValue, asc_desc):
 
     except Exception as e:
         print(e) # print the error report if we faced the exception
-        response = {'Failed to load data from the table in SQL database'}
+        response = {'Failed to load & sort data from the table in SQL database.'}
+
+    response_pickled = jsonpickle.encode(response)
+    return Response(response=response_pickled, status=200, mimetype="application/json")
+
+@app.route('/apiv1/deleteByID/<string:id_to_delete>', methods=['GET'])
+def deleteByID(id_to_delete):
+    # get the list of data stored in sql database's table now
+    # and return it back to client in sorted order
+    r = request
+
+    try:
+        # drop the table we created
+        print(f"drop the current row with id {id_to_delete} from table!\n")
+        sql = f"DELETE FROM {tablename} WHERE ID = {id_to_delete};"
+        mycursor.execute(sql)
+        response = {f"Successfully deleted the row with id {id_to_delete} from SQL database!"}
+
+    except Exception as e:
+        print(e) # print the error report if we faced the exception
+        response = {'Failed to delete row in table.'}
+
+    response_pickled = jsonpickle.encode(response)
+    return Response(response=response_pickled, status=200, mimetype="application/json")
+
+@app.route('/apiv1/deleteTable', methods=['GET'])
+def deleteTable():
+    # get the list of data stored in sql database's table now
+    # and return it back to client in sorted order
+    r = request
+
+    try:
+        # drop the table we created
+        print("drop the current table!\n")
+        sql = f"DROP TABLE {tablename}"
+        mycursor.execute(sql)
+        response = {"Successfully deleted the table from SQL database!"}
+
+    except Exception as e:
+        print(e) # print the error report if we faced the exception
+        response = {'Failed to delete table in SQL database.'}
 
     response_pickled = jsonpickle.encode(response)
     return Response(response=response_pickled, status=200, mimetype="application/json")

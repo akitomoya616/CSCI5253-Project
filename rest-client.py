@@ -40,17 +40,17 @@ for shopping_data in glob.glob("data/*json"):
     print(f"Grab {shopping_data}")
     print('sending shopping data to REST server...')
     # send the json data here
-    # mkReq(requests.post, "apiv1/send",
-    #     data={
-    #         "shopping": base64.b64encode( open(shopping_data, "rb").read() ).decode('utf-8'),
-    #         "callback": {
-    #             "url": "http://localhost:5000",
-    #             "data": {"shopping": 'this is the shopping data under callback!', 
-    #                      "data": "to be returned"}
-    #         }
-    #     },
-    #     verbose=True
-    #     )
+    mkReq(requests.post, "apiv1/send",
+        data={
+            "shopping": base64.b64encode( open(shopping_data, "rb").read() ).decode('utf-8'),
+            "callback": {
+                "url": "http://localhost:5000",
+                "data": {"shopping": 'this is the shopping data under callback!', 
+                         "data": "to be returned"}
+            }
+        },
+        verbose=True
+        )
     # check current data in redis
     # print('current REDIS database contains the following data:')
     # mkReq(requests.get, "apiv1/queue", data=None)
@@ -58,13 +58,27 @@ for shopping_data in glob.glob("data/*json"):
     # send the next data after 1 second
     time.sleep(1)
 
-# check current data in sql
-print('current table in SQL database contains the following data:')
+# check current data in table
+print('\ncurrent table in SQL database contains the following data:')
 mkReq(requests.get, "apiv1/sqlqueue", data=None)
 
 # get all data sorted by date
-print('all data from newest to oldest:')
+print('\nall data from newest to oldest:')
 mkReq(requests.get, "apiv1/sort/date/DESC", data=None)
+
+# delete specific data by its id from the table in sql database
+print('\ndelete the current data from the table.')
+mkReq(requests.get, "apiv1/deleteByID/4", data=None)
+mkReq(requests.get, "apiv1/sqlqueue", data=None)
+
+
+
+
+
+
+# delete the table from sql database - WILL NOT BE USED BY USER since they do not have the rights to elimiate a general table
+# print('\ndelete the current table.')
+# mkReq(requests.get, "apiv1/deleteTable", data=None)
 
 # do two more requests:
 # now we can only do the following 2 tests in short but not in sample-requests.py
