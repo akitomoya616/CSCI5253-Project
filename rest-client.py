@@ -68,7 +68,7 @@ mkReq(requests.get, "apiv1/sort/date/DESC", data=None)
 
 # delete specific data by its id from the table in sql database
 print('\ndelete the current data from the table.')
-mkReq(requests.get, "apiv1/deleteByID/4", data=None)
+mkReq(requests.get, "apiv1/deleteByID/2", data=None)
 mkReq(requests.get, "apiv1/sqlqueue", data=None)
 
 # return the total cost of all the products listed in the current table
@@ -81,7 +81,7 @@ mkReq(requests.get, "apiv1/sumPrice", data=None)
 
 
 # delete the table from sql database - WILL NOT BE USED BY USER since they do not have the rights to elimiate a general table
-# print('\ndelete the current table.')
+# print('\ndelete the current tables.')
 # mkReq(requests.get, "apiv1/deleteTable", data=None)
 
 # do two more requests:

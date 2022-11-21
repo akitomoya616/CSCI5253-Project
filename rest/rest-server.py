@@ -58,7 +58,8 @@ bucketname='CSCI5253-Project'
 
 # set sql database and table value for later use
 sqldatabasename = 'TEST_DB' #'project_database'
-tablename = 'customer'
+deleteTableName = 'DELETED_DATA'
+tableName = 'customer'
 
 # connect to SQL server
 print("connecting to MySQL server...\n")
@@ -85,11 +86,12 @@ mydb = mysql.connector.connect(
         database=sqldatabasename)
 print("Successfully connected to: " + sqldatabasename + "!\n")
 
-mycursor = mydb.cursor() # mycursor now reference to the database table we pointed to
+mycursor = mydb.cursor() # mycursor now reference to the database we pointed to
 
 # create the table we need if it does not exist with all column names and data types
 # remember to DELETE THE WHOLE TABLE AND RECREATE IT if datatype for an EXISTING column has been changed
-mycursor.execute(f"CREATE TABLE if not exists {tablename} (ID INT, Name VARCHAR(255), Product VARCHAR(255), Price DECIMAL(9,3), Date VARCHAR(255))") # DECIMAL(9,3) means we can have up to 6 places before the decimal and a decimal of up to 3 places
+mycursor.execute(f"CREATE TABLE if not exists {tableName} (ID INT, Name VARCHAR(255), Product VARCHAR(255), Price DECIMAL(9,3), Date VARCHAR(255))") # DECIMAL(9,3) means we can have up to 6 places before the decimal and a decimal of up to 3 places
+mycursor.execute(f"CREATE TABLE if not exists {deleteTableName} (ID INT)") # only stores deleted id
 
 print("Tables in the current database:")
 mycursor.execute("SHOW TABLES")
@@ -111,15 +113,21 @@ def addData():
         shopping_data = json.loads(shopping_data_decoded) 
 
         # assign a id to the current data based on the input order into the table
-        mycursor.execute(f"SELECT COUNT(*) FROM {tablename}")
-        myresult = mycursor.fetchall() # return in form as [(value,)], shows the current number of rows in table
-        id = myresult[0][0] + 1 # [0][0] to get that value from returned list, which is the last row's id, 
-                                # +1 to get current row's id that we are going to add into the table
+        mycursor.execute(f"SELECT COUNT(*) FROM {tableName}")
+        previous_id = mycursor.fetchall() # return in form as [(value,)], shows the current number of rows in table
+        mycursor.execute(f"SELECT COUNT(*) FROM {deleteTableName}")
+        deleted_id_count = mycursor.fetchall() # return in form as [(value,)], shows the current number of rows in table
+        id = previous_id[0][0] + deleted_id_count[0][0] + 1 # [0][0] to get that value from returned list, which is the last row's id, 
+                                                            # + count of deleted id so that new value's id will NEVER replace an existing or used id
+                                                            # + 1 to get current row's id that we are going to add into the table
+                                                            # e.g. if we have 4 ids in table, remove the 4th one, then add 4 more
+                                                            # the result will be 1, 2, 3, 5, 6, 7, 8
+                                                            # but not            1, 2, 3, 4, 5, 6, 7
 
         # intert data into the table
         print("Now start adding value into the table!")
         # why use %s but not %d for integer values id and price as placeholder: https://stackoverflow.com/questions/20818155/not-all-parameters-were-used-in-the-sql-statement-python-mysql
-        sql = f"INSERT INTO {tablename} (ID, Name, Product, Price, Date) VALUES (%s, %s, %s, %s, %s)"
+        sql = f"INSERT INTO {tableName} (ID, Name, Product, Price, Date) VALUES (%s, %s, %s, %s, %s)"
         val = [
             (id, shopping_data['name'], shopping_data['product'], float(shopping_data['price']), shopping_data['date'])
         ]
@@ -144,15 +152,13 @@ def showSQLQueue():
     # get the list of data stored in sql database's table now
     # and return it back to client
     r = request
-
-    # add all data in the table to element array
-    mycursor.execute(f"SELECT * FROM {tablename}")
-    myresult = mycursor.fetchall()
-    element = []
-    for x in myresult:
-        element.append(str(x))
-
     try:
+        # add all data in the table to element array
+        mycursor.execute(f"SELECT * FROM {tableName}")
+        myresult = mycursor.fetchall()
+        element = []
+        for x in myresult:
+            element.append(str(x))
         response = element
 
     except Exception as e:
@@ -167,10 +173,9 @@ def sumPrice():
     # get the list of data stored in sql database's table now
     # and return it back to client
     r = request
-
     try:
         # add all data in the table to element array
-        mycursor.execute(f"SELECT SUM(Price) FROM {tablename}")
+        mycursor.execute(f"SELECT SUM(Price) FROM {tableName}")
         myresult = mycursor.fetchall() # return in form as [(value,)]
         sum = myresult[0][0] # [0][0] to get that value from returned list, which is the total price
         response = {
@@ -189,15 +194,13 @@ def sortSQLQueue(orderByValue, asc_desc):
     # get the list of data stored in sql database's table now
     # and return it back to client in sorted order
     r = request
-
-    # add all data in the table to element array
-    mycursor.execute(f"SELECT * FROM {tablename} ORDER BY {orderByValue} {asc_desc}")
-    myresult = mycursor.fetchall()
-    element = []
-    for x in myresult:
-        element.append(str(x))
-
     try:
+        # add all data in the table to element array
+        mycursor.execute(f"SELECT * FROM {tableName} ORDER BY {orderByValue} {asc_desc}")
+        myresult = mycursor.fetchall()
+        element = []
+        for x in myresult:
+            element.append(str(x))
         response = element
 
     except Exception as e:
@@ -212,13 +215,29 @@ def deleteByID(id_to_delete):
     # get the list of data stored in sql database's table now
     # and return it back to client in sorted order
     r = request
-
     try:
-        # drop the table we created
+        # drop the row we created in table
         print(f"drop the current row with id {id_to_delete} from table!\n")
-        sql = f"DELETE FROM {tablename} WHERE ID = {id_to_delete};"
+        sql = f"DELETE FROM {tableName} WHERE ID = {id_to_delete}"
         mycursor.execute(sql)
         response = {f"Successfully deleted the row with id {id_to_delete} from SQL database!"}
+
+        # add the id of the row we want to delete to deleted table
+        # DO NOT ADD SAME VALUE MUTIPLE TIMES, otherwise the comming id for new values in data table will increase as well
+        print(f"add the id: {id_to_delete} of the data we want to delete to deleted table!\n")
+        # normal INSERT INTO but with WHERE NOT EXISTS to check duplications
+        # reference: https://stackoverflow.com/questions/3164505/mysql-insert-record-if-not-exists-in-table
+        sql = f"INSERT INTO {deleteTableName} SELECT * FROM (SELECT ({int(id_to_delete)})) AS tmp WHERE NOT EXISTS (SELECT ID FROM {deleteTableName} WHERE ID = {int(id_to_delete)}) LIMIT 1"
+        mycursor.execute(sql)
+        mydb.commit()
+        print("add into deleted table successfully! Now deleted table contains:")
+        # add all data in the table to element array
+        mycursor.execute(f"SELECT * FROM {deleteTableName}")
+        myresult = mycursor.fetchall()
+        element = []
+        for x in myresult:
+            print(str(x))
+        print()
 
     except Exception as e:
         print(e) # print the error report if we faced the exception
@@ -232,13 +251,12 @@ def deleteTable():
     # get the list of data stored in sql database's table now
     # and return it back to client in sorted order
     r = request
-
     try:
-        # drop the table we created
+        # drop the two tables we created
         print("drop the current table!\n")
-        sql = f"DROP TABLE {tablename}"
+        sql = f"DROP TABLE {tableName}, {deleteTableName}"
         mycursor.execute(sql)
-        response = {"Successfully deleted the table from SQL database!"}
+        response = {"Successfully deleted all tables from SQL database!"}
 
     except Exception as e:
         print(e) # print the error report if we faced the exception
