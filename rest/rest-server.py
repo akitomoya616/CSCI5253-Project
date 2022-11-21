@@ -88,7 +88,8 @@ print("Successfully connected to: " + sqldatabasename + "!\n")
 mycursor = mydb.cursor() # mycursor now reference to the database table we pointed to
 
 # create the table we need if it does not exist with all column names and data types
-mycursor.execute(f"CREATE TABLE if not exists {tablename} (ID INT, Name VARCHAR(255), Product VARCHAR(255), Price INT, Date VARCHAR(255))")
+# remember to DELETE THE WHOLE TABLE AND RECREATE IT if datatype for an EXISTING column has been changed
+mycursor.execute(f"CREATE TABLE if not exists {tablename} (ID INT, Name VARCHAR(255), Product VARCHAR(255), Price DECIMAL(9,3), Date VARCHAR(255))") # DECIMAL(9,3) means we can have up to 6 places before the decimal and a decimal of up to 3 places
 
 print("Tables in the current database:")
 mycursor.execute("SHOW TABLES")
@@ -118,7 +119,7 @@ def takeMp3():
         # why use %s but not %d for integer values id and price as placeholder: https://stackoverflow.com/questions/20818155/not-all-parameters-were-used-in-the-sql-statement-python-mysql
         sql = f"INSERT INTO {tablename} (ID, Name, Product, Price, Date) VALUES (%s, %s, %s, %s, %s)"
         val = [
-            (id, shopping_data['name'], shopping_data['product'], shopping_data['price'], shopping_data['date'])
+            (id, shopping_data['name'], shopping_data['product'], float(shopping_data['price']), shopping_data['date'])
         ]
         mycursor.executemany(sql, val) # use mycursor.execute(sql, val) if we have one line of val to put
         mydb.commit()
@@ -151,6 +152,28 @@ def showSQLQueue():
 
     try:
         response = element
+
+    except Exception as e:
+        print(e) # print the error report if we faced the exception
+        response = {'Failed to load data from the table in SQL database.'}
+
+    response_pickled = jsonpickle.encode(response)
+    return Response(response=response_pickled, status=200, mimetype="application/json")
+
+@app.route('/apiv1/sumPrice', methods=['GET'])
+def sumPrice():
+    # get the list of data stored in sql database's table now
+    # and return it back to client
+    r = request
+
+    try:
+        # add all data in the table to element array
+        mycursor.execute(f"SELECT SUM(Price) FROM {tablename}")
+        myresult = mycursor.fetchall() # return in form as [(value,)]
+        sum = myresult[0][0] # [0][0] to get that value from returned list, which is the total price
+        response = {
+            f'total price: ${sum}' 
+        }
 
     except Exception as e:
         print(e) # print the error report if we faced the exception
@@ -221,6 +244,7 @@ def deleteTable():
 
     response_pickled = jsonpickle.encode(response)
     return Response(response=response_pickled, status=200, mimetype="application/json")
+
 
 
 

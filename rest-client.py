@@ -71,6 +71,10 @@ print('\ndelete the current data from the table.')
 mkReq(requests.get, "apiv1/deleteByID/4", data=None)
 mkReq(requests.get, "apiv1/sqlqueue", data=None)
 
+# return the total cost of all the products listed in the current table
+print('\ntotal price of the products listed above is: ')
+mkReq(requests.get, "apiv1/sumPrice", data=None)
+
 
 
 
