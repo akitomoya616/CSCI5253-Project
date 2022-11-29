@@ -39,6 +39,7 @@ def mkReq(reqmethod, endpoint, data, verbose=True):
 for shopping_data in glob.glob("data/*json"):
     print(f"Grab {shopping_data}")
     print('sending shopping data to REST server...')
+    
     # send the json data here
     mkReq(requests.post, "apiv1/add",
         data={
@@ -51,9 +52,10 @@ for shopping_data in glob.glob("data/*json"):
         },
         verbose=True
         )
+
     # check current data in redis
-    # print('current REDIS database contains the following data:')
-    # mkReq(requests.get, "apiv1/queue", data=None)
+    print('current REDIS database contains the following data:')
+    mkReq(requests.get, "apiv1/queue", data=None)
     
     # send the next data after 1 second
     time.sleep(1)

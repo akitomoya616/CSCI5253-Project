@@ -43,6 +43,7 @@ log.setLevel(logging.DEBUG)
 redisHost = os.getenv("REDIS_HOST") or "localhost"
 redisPort = os.getenv("REDIS_PORT") or 6379
 redisClient = redis.StrictRedis(host=redisHost, port=redisPort, db=0)
+print("Successfully connected to the REDIS server!\n")
 
 # set minio host and port for connection
 minioHost = os.getenv("MINIO_HOST") or "localhost:9000"
@@ -53,8 +54,9 @@ minioClient = Minio(minioHost,
                secure=False,
                access_key=minioUser,
                secret_key=minioPasswd)
+print("Successfully connected to the minIO server!\n")
 
-bucketname='CSCI5253-Project'
+bucketname='CSCI5253-Project' # for minio bucket setup and referenc
 
 # set sql database and table value for later use
 sqldatabasename = 'TEST_DB' #'project_database'
@@ -111,29 +113,37 @@ def addData():
         # this decoded data from above is in bytes but not in dict since we used json.loads on the encoded file but not the decoded one
         # therefore we need to load it again to get dict type file
         shopping_data = json.loads(shopping_data_decoded) 
-
-        # assign a id to the current data based on the input order into the table
-        mycursor.execute(f"SELECT COUNT(*) FROM {tableName}")
-        previous_id = mycursor.fetchall() # return in form as [(value,)], shows the current number of rows in table
-        mycursor.execute(f"SELECT COUNT(*) FROM {deleteTableName}")
-        deleted_id_count = mycursor.fetchall() # return in form as [(value,)], shows the current number of rows in table
-        id = previous_id[0][0] + deleted_id_count[0][0] + 1 # [0][0] to get that value from returned list, which is the last row's id, 
-                                                            # + count of deleted id so that new value's id will NEVER replace an existing or used id
-                                                            # + 1 to get current row's id that we are going to add into the table
-                                                            # e.g. if we have 4 ids in table, remove the 4th one, then add 4 more
-                                                            # the result will be 1, 2, 3, 5, 6, 7, 8
-                                                            # but not            1, 2, 3, 4, 5, 6, 7
-
+        
         # intert data into the table
         print("Now start adding value into the table!")
-        # why use %s but not %d for integer values id and price as placeholder: https://stackoverflow.com/questions/20818155/not-all-parameters-were-used-in-the-sql-statement-python-mysql
-        sql = f"INSERT INTO {tableName} (ID, Name, Product, Price, Date) VALUES (%s, %s, %s, %s, %s)"
-        val = [
-            (id, shopping_data['name'], shopping_data['product'], float(shopping_data['price']), shopping_data['date'])
-        ]
-        mycursor.executemany(sql, val) # use mycursor.execute(sql, val) if we have one line of val to put
-        mydb.commit()
-        print(mycursor.rowcount, "record inserted.\n")
+        # # why use %s but not %d for integer values id and price as placeholder: https://stackoverflow.com/questions/20818155/not-all-parameters-were-used-in-the-sql-statement-python-mysql
+        # sql = f"INSERT INTO {tableName} (ID, Name, Product, Price, Date) VALUES (%s, %s, %s, %s, %s)"
+        # val = [
+        #     (id, shopping_data['name'], shopping_data['product'], float(shopping_data['price']), shopping_data['date'])
+        # ]
+        # mycursor.executemany(sql, val) # use mycursor.execute(sql, val) if we have one line of val to put
+        # mydb.commit()
+        # print(mycursor.rowcount, "record inserted.\n")
+        
+        print("pushing into redis!")
+        sql_command_list = [str(shopping_data['name']), str(shopping_data['product']), str(float(shopping_data['price'])), str(shopping_data['date'])]
+        sql_command_string = ','.join(sql_command_list)
+        print("current command is: " + sql_command_string + "\n")
+        redisClient.lpush("sql_command", str(sql_command_string)) 
+        
+        # use the following command to delete all value related to the given key
+        # redisClient.delete("hash_for_worker")
+        
+        print("length right now at lpush stage is: " + str(redisClient.llen("sql_command")) + "\n")
+        
+        # wait till worker finishing process this mp3 file and pop it out from redis
+        # in general, there's only gonna have 1 file in redis between the following process 
+        # rest post data to redis - worker process it and upload everything to minio 
+        # - worker pop it out from redis - rest post another data to redis
+        while (redisClient.llen("sql_command") != 0):
+            print("Waiting for Worker to finish processing this mp3 file...")
+            print()
+            time.sleep(1)
 
         response = {
             'status' : "got it!",
@@ -227,7 +237,7 @@ def deleteByID(id_to_delete):
         print(f"add the id: {id_to_delete} of the data we want to delete to deleted table!\n")
         # normal INSERT INTO but with WHERE NOT EXISTS to check duplications
         # reference: https://stackoverflow.com/questions/3164505/mysql-insert-record-if-not-exists-in-table
-        sql = f"INSERT INTO {deleteTableName} SELECT * FROM (SELECT ({int(id_to_delete)})) AS tmp WHERE NOT EXISTS (SELECT ID FROM {deleteTableName} WHERE ID = {int(id_to_delete)}) LIMIT 1"
+        sql = f"INSERT INTO {deleteTableName} SELECT * FROM (SELECT ({int(id_to_delete)}) ) AS tmp WHERE NOT EXISTS (SELECT ID FROM {deleteTableName} WHERE ID = {int(id_to_delete)}) LIMIT 1"
         mycursor.execute(sql)
         mydb.commit()
         print("add into deleted table successfully! Now deleted table contains:")
