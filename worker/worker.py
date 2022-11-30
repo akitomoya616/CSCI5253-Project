@@ -4,7 +4,8 @@ import os
 import platform
 from minio import Minio
 
-import glob
+import base64
+import hashlib
 
 import mysql.connector
 from mysql.connector import Error
@@ -65,18 +66,24 @@ mydb = mysql.connector.connect(
         database=sqldatabasename)
 print("Successfully connected to: " + sqldatabasename + "!\n")
 
-mycursor = mydb.cursor() # mycursor now reference to the database we pointed to
+# mycursor = mydb.cursor() # mycursor now reference to the database we pointed to
+mycursor = mydb.cursor(buffered=True) # mycursor now reference to the database we pointed to, referenced from https://stackoverflow.com/questions/29772337/python-mysql-connector-unread-result-found-when-using-fetchone
 
 # create the table we need if it does not exist with all column names and data types
 # remember to DELETE THE WHOLE TABLE AND RECREATE IT if datatype for an EXISTING column has been changed
-mycursor.execute(f"CREATE TABLE if not exists {tableName} (ID INT, Name VARCHAR(255), Product VARCHAR(255), Price DECIMAL(9,3), Date VARCHAR(255))") # DECIMAL(9,3) means we can have up to 6 places before the decimal and a decimal of up to 3 places
-mycursor.execute(f"CREATE TABLE if not exists {deleteTableName} (ID INT)") # only stores deleted id
+# set id as primary key and allow it to be automatically generated everytime we plug in new row
+mycursor.execute(f"CREATE TABLE if not exists {tableName} (ID INT NOT NULL AUTO_INCREMENT, Name VARCHAR(255), Product VARCHAR(255), Price DECIMAL(9,3), Date VARCHAR(255), PRIMARY KEY (ID))") # DECIMAL(9,3) means we can have up to 6 places before the decimal and a decimal of up to 3 places
+mycursor.execute(f"CREATE TABLE if not exists {deleteTableName} (ID INT)") # only stores deleted id - NOT IN USE RIGHT NOW since now ID for each row will be automatically generated
 
 print("Tables in the current database:")
 mycursor.execute("SHOW TABLES")
 for x in mycursor:
   print(x)
 print()
+
+# Clean out redis value in these key if needed during development process
+# redisClient.delete("sql_result")
+# redisClient.delete("sql_command")
 
 def log_debug(message, key=debugKey):
     print("DEBUG:", message, file=sys.stdout)
@@ -95,21 +102,6 @@ try:
             print("Found sql command in redis, start processing!")
             print()
 
-            # assign the current data with a new id
-            mycursor.execute(f"SELECT COUNT(*) FROM {tableName}")
-            previous_id = mycursor.fetchall() # return in form as [(value,)], shows the current number of rows in table
-            print("previous id is: " + str(previous_id))
-            mycursor.execute(f"SELECT COUNT(*) FROM {deleteTableName}")
-            deleted_id_count = mycursor.fetchall() # return in form as [(value,)], shows the current number of rows in table
-            print("total count of deleted id is: " + str(deleted_id_count))
-            id = previous_id[0][0] + deleted_id_count[0][0] + 1 # [0][0] to get that value from returned list, which is the last row's id, 
-                                                                # + count of deleted id so that new value's id will NEVER replace an existing or used id
-                                                                # + 1 to get current row's id that we are going to add into the table
-                                                                # e.g. if we have 4 ids in table, remove the 4th one, then add 4 more
-                                                                # the result will be 1, 2, 3, 5, 6, 7, 8
-                                                                # but not            1, 2, 3, 4, 5, 6, 7
-            print("therefore id assigned for current data is: " + str(id) + "\n")
-
             # first only get the data from redis instead of poping it right now, do the following normal processes
             current_command_from_redis = redisClient.lindex("sql_command", 0)
             log_debug("print current command value")
@@ -120,27 +112,103 @@ try:
             current_command_from_redis = list(str(current_command_from_redis).replace("b'", '').replace("'",'').split(",")) 
             print(current_command_from_redis)
 
-            log_debug("assign values gained from sql command")
-            name, product, price, date = [i for i in current_command_from_redis]
+            command_type = current_command_from_redis[0]
 
-            log_debug("generate SQL command")
-            # INSERT INTO table_listnames (name, address, tele)
-            # SELECT * FROM (SELECT 'Rupert', 'Somewhere', '022') AS tmp
-            # WHERE NOT EXISTS (
-            #     SELECT name FROM table_listnames WHERE name = 'Rupert'
-            # ) LIMIT 1;
+            if (command_type == "INSERT"):
+                log_debug("entering sql command for insertion!")
+                log_debug("assign values gained from sql command")
+                type, name, product, price, date = [i for i in current_command_from_redis] # type = INSERT in this case, not gonna be used
 
-            # INSERT INTO {tableName} (ID, Name, Product, Price, Date)
-            # SELECT * FROM (SELECT \'{int(id)}\', \'{name}\', \'{product}\', \'{float(price)}\', \'{date}\') AS tmp     <-- must give value with '' (int and float value can be ignored) so they can bre recognized as value but not column name
-            # WHERE NOT EXISTS (
-            #     SELECT * FROM {tableName} WHERE Name = \'{name}\' AND Product = \'{product}\' AND Price = \'{float(price)}\' AND Date = \'{date}\'
-            # ) LIMIT 1
-            print(id, name, product, price, date)
-            sql = f"INSERT INTO {tableName} (ID, Name, Product, Price, Date) SELECT * FROM (SELECT \'{int(id)}\', \'{str(name)}\', \'{product}\', \'{float(price)}\', \'{date}\') AS tmp WHERE NOT EXISTS (SELECT * FROM {tableName} WHERE Name = \'{name}\' AND Product = \'{product}\' AND Price = \'{float(price)}\' AND Date = \'{date}\') LIMIT 1"
-            mycursor.execute(sql)
-            mydb.commit()
+                log_debug("generate SQL command")
+                print(id, name, product, price, date)
+                # INSERT INTO {tableName} (ID, Name, Product, Price, Date)
+                # SELECT * FROM (SELECT \'{int(id)}\', \'{name}\', \'{product}\', \'{float(price)}\', \'{date}\') AS tmp     <-- must give value with '' (int and float value can be ignored) so they can bre recognized as value but not column name
+                # WHERE NOT EXISTS (
+                #     SELECT * FROM {tableName} WHERE Name = \'{name}\' AND Product = \'{product}\' AND Price = \'{float(price)}\' AND Date = \'{date}\'
+                # ) LIMIT 1
+                sql = f"INSERT INTO {tableName} (Name, Product, Price, Date) SELECT * FROM (SELECT \'{str(name)}\', \'{product}\', \'{float(price)}\', \'{date}\') AS tmp WHERE NOT EXISTS (SELECT * FROM {tableName} WHERE Name = \'{name}\' AND Product = \'{product}\' AND Price = \'{float(price)}\' AND Date = \'{date}\') LIMIT 1"
+                log_debug("execute SQL command")
+                mycursor.execute(sql)
+                mydb.commit()
 
+            elif (command_type == "QUEUE"):
+                log_debug("entering sql command for queuing!")
+                
+                log_debug("generate SQL command")
+                sql = f"SELECT * FROM {tableName}"
+                log_debug("execute SQL command")
+                mycursor.execute(sql)
+                mydb.commit()
+                myresult = mycursor.fetchall()
+                element = []
+                for x in myresult:
+                    element.append(str(x))
+                
+                print(str(element))
+                # element_encoded = base64.b64encode(str(element)).decode('utf-8')
+                # return the result back to REDIS with a different tag for rest server to grab from
+                redisClient.lpush("sql_result", *element) 
+
+            elif (command_type == "SUM"):
+                log_debug("entering sql command for summarizing!")
+                
+                log_debug("generate SQL command")
+                sql = f"SELECT SUM(Price) FROM {tableName}"
+                log_debug("execute SQL command")
+                mycursor.execute(sql)
+                mydb.commit()
+                myresult = mycursor.fetchall()
+                sum = myresult[0][0] # [0][0] to get that value from returned list, which is the total price
+                
+                # return the result back to REDIS with a different tag for rest server to grab from
+                redisClient.lpush("sql_result", str(sum)) 
+                
+            elif (command_type == "SORT"):
+                log_debug("entering sql command for queuing!")
+
+                log_debug("assign values gained from sql command")
+                type, orderByValue, asc_desc = [i for i in current_command_from_redis] # type = INSERT in this case, not gonna be used
+                
+                log_debug("generate SQL command")
+                sql = f"SELECT * FROM {tableName} ORDER BY {orderByValue} {asc_desc}"
+                log_debug("execute SQL command")
+                mycursor.execute(sql)
+                mydb.commit()
+                myresult = mycursor.fetchall()
+                element = []
+                for x in myresult:
+                    element.append(str(x))
+                
+                # return the result back to REDIS with a different tag for rest server to grab from
+                redisClient.lpush("sql_result", str(element)) 
             
+            elif (command_type == "DELETE"):
+                log_debug("entering sql command for deletion!")
+                log_debug("assign values gained from sql command")
+                type, table_name, id_to_delete = [i for i in current_command_from_redis] # type = DELETE in this case, not gonna be used
+                
+                log_debug("generate SQL command")
+                sql = f"DELETE FROM {table_name} WHERE ID = {id_to_delete}"
+                log_debug("execute SQL command")
+                mycursor.execute(sql)
+                mydb.commit()
+            
+            elif (command_type == "DROP"):
+                log_debug("entering table sql command for dropping!")
+                log_debug("assign values gained from sql command")
+                type, table_name = [i for i in current_command_from_redis] # type = DELETE in this case, not gonna be used
+
+                log_debug("generate SQL command")
+                sql = f"DROP TABLE {table_name}"
+                log_debug("execute SQL command")
+                mycursor.execute("commit ")
+                mycursor.execute(sql)
+                mydb.commit()
+
+            else:
+                log_debug("not a valid sql command!")
+            
+            log_debug("exiting sql command!")
             redisClient.rpop("sql_command")
 
             print()

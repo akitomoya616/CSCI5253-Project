@@ -63,43 +63,44 @@ sqldatabasename = 'TEST_DB' #'project_database'
 deleteTableName = 'DELETED_DATA'
 tableName = 'customer'
 
-# connect to SQL server
-print("connecting to MySQL server...\n")
-mydb = mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="test1234")
-mycursor = mydb.cursor() # mycursor now reference to the whole sql server
-print("Successfully connected to the SQL database!\n")
+# # connect to SQL server
+# print("connecting to MySQL server...\n")
+# mydb = mysql.connector.connect(
+#         host="localhost",
+#         user="root",
+#         password="test1234")
+# mycursor = mydb.cursor() # mycursor now reference to the whole sql server
+# print("Successfully connected to the SQL database!\n")
 
-# create a database in this SQL server
-mycursor.execute("CREATE DATABASE IF NOT EXISTS " + sqldatabasename)
-print("Current databases in the SQL server are:")
-mycursor.execute("SHOW DATABASES")
-for x in mycursor:
-  print(x)
-print()
+# # create a database in this SQL server
+# mycursor.execute("CREATE DATABASE IF NOT EXISTS " + sqldatabasename)
+# print("Current databases in the SQL server are:")
+# mycursor.execute("SHOW DATABASES")
+# for x in mycursor:
+#   print(x)
+# print()
 
-# connect to the specific database
-mydb = mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="test1234",
-        database=sqldatabasename)
-print("Successfully connected to: " + sqldatabasename + "!\n")
+# # connect to the specific database
+# mydb = mysql.connector.connect(
+#         host="localhost",
+#         user="root",
+#         password="test1234",
+#         database=sqldatabasename)
+# print("Successfully connected to: " + sqldatabasename + "!\n")
 
-mycursor = mydb.cursor() # mycursor now reference to the database we pointed to
+# mycursor = mydb.cursor() # mycursor now reference to the database we pointed to
 
-# create the table we need if it does not exist with all column names and data types
-# remember to DELETE THE WHOLE TABLE AND RECREATE IT if datatype for an EXISTING column has been changed
-mycursor.execute(f"CREATE TABLE if not exists {tableName} (ID INT, Name VARCHAR(255), Product VARCHAR(255), Price DECIMAL(9,3), Date VARCHAR(255))") # DECIMAL(9,3) means we can have up to 6 places before the decimal and a decimal of up to 3 places
-mycursor.execute(f"CREATE TABLE if not exists {deleteTableName} (ID INT)") # only stores deleted id
+# # create the table we need if it does not exist with all column names and data types
+# # remember to DELETE THE WHOLE TABLE AND RECREATE IT if datatype for an EXISTING column has been changed
+# # set id as primary key and allow it to be automatically generated everytime we plug in new row
+# mycursor.execute(f"CREATE TABLE if not exists {tableName} (ID INT NOT NULL AUTO_INCREMENT, Name VARCHAR(255), Product VARCHAR(255), Price DECIMAL(9,3), Date VARCHAR(255), PRIMARY KEY (ID))") # DECIMAL(9,3) means we can have up to 6 places before the decimal and a decimal of up to 3 places
+# mycursor.execute(f"CREATE TABLE if not exists {deleteTableName} (ID INT)") # only stores deleted id - NOT IN USE RIGHT NOW since now ID for each row will be automatically generated
 
-print("Tables in the current database:")
-mycursor.execute("SHOW TABLES")
-for x in mycursor:
-  print(x)
-print()
+# print("Tables in the current database:")
+# mycursor.execute("SHOW TABLES")
+# for x in mycursor:
+#   print(x)
+# print()
 
 # method definition: by mentioning "GET", "POST", "DELETE" in methods=[], we allow the client side (in our case it is the rest-client.py)
 # to have the corresponding ability to call requests.get/post/delete
@@ -114,25 +115,14 @@ def addData():
         # therefore we need to load it again to get dict type file
         shopping_data = json.loads(shopping_data_decoded) 
         
-        # intert data into the table
-        print("Now start adding value into the table!")
-        # # why use %s but not %d for integer values id and price as placeholder: https://stackoverflow.com/questions/20818155/not-all-parameters-were-used-in-the-sql-statement-python-mysql
-        # sql = f"INSERT INTO {tableName} (ID, Name, Product, Price, Date) VALUES (%s, %s, %s, %s, %s)"
-        # val = [
-        #     (id, shopping_data['name'], shopping_data['product'], float(shopping_data['price']), shopping_data['date'])
-        # ]
-        # mycursor.executemany(sql, val) # use mycursor.execute(sql, val) if we have one line of val to put
-        # mydb.commit()
-        # print(mycursor.rowcount, "record inserted.\n")
-        
         print("pushing into redis!")
-        sql_command_list = [str(shopping_data['name']), str(shopping_data['product']), str(float(shopping_data['price'])), str(shopping_data['date'])]
-        sql_command_string = ','.join(sql_command_list)
+        sql_command_list = ["INSERT", str(shopping_data['name']), str(shopping_data['product']), str(float(shopping_data['price'])), str(shopping_data['date'])]
+        sql_command_string = ','.join(sql_command_list) # turn the list type data into string with comma to seperate each value
         print("current command is: " + sql_command_string + "\n")
         redisClient.lpush("sql_command", str(sql_command_string)) 
         
         # use the following command to delete all value related to the given key
-        # redisClient.delete("hash_for_worker")
+        # redisClient.delete("sql_command")
         
         print("length right now at lpush stage is: " + str(redisClient.llen("sql_command")) + "\n")
         
@@ -141,7 +131,7 @@ def addData():
         # rest post data to redis - worker process it and upload everything to minio 
         # - worker pop it out from redis - rest post another data to redis
         while (redisClient.llen("sql_command") != 0):
-            print("Waiting for Worker to finish processing this mp3 file...")
+            print("Waiting for Worker to finish processing this SQL queury...")
             print()
             time.sleep(1)
 
@@ -163,12 +153,29 @@ def showSQLQueue():
     # and return it back to client
     r = request
     try:
-        # add all data in the table to element array
-        mycursor.execute(f"SELECT * FROM {tableName}")
-        myresult = mycursor.fetchall()
-        element = []
-        for x in myresult:
-            element.append(str(x))
+        print("pushing into redis!")
+        sql_command_list = ["QUEUE"]
+        sql_command_string = ','.join(sql_command_list) # turn the list type data into string with comma to seperate each value
+        print("current command is: " + sql_command_string + "\n")
+        redisClient.lpush("sql_command", str(sql_command_string)) 
+
+        while (redisClient.llen("sql_command") != 0):
+            print("Waiting for Worker to finish processing this SQL queury...")
+            print()
+            time.sleep(1)
+
+        # element_encoded = redisClient.rpop("sql_result")
+        # element_decoded = base64.b64decode(element_encoded) 
+        # element = json.loads(element_decoded)
+
+        # element = []
+        # while (redisClient.llen("sql_result") != 0):
+        #     element.append(redisClient.rpop("sql_result"))
+
+        element = redisClient.rpop("sql_result")
+        print("received: ")
+        print(element)
+
         response = element
 
     except Exception as e:
@@ -184,10 +191,19 @@ def sumPrice():
     # and return it back to client
     r = request
     try:
-        # add all data in the table to element array
-        mycursor.execute(f"SELECT SUM(Price) FROM {tableName}")
-        myresult = mycursor.fetchall() # return in form as [(value,)]
-        sum = myresult[0][0] # [0][0] to get that value from returned list, which is the total price
+        print("pushing into redis!")
+        sql_command_list = ["SUM"]
+        sql_command_string = ','.join(sql_command_list) # turn the list type data into string with comma to seperate each value
+        print("current command is: " + sql_command_string + "\n")
+        redisClient.lpush("sql_command", str(sql_command_string)) 
+
+        while (redisClient.llen("sql_command") != 0):
+            print("Waiting for Worker to finish processing this SQL queury...")
+            print()
+            time.sleep(1)
+
+        sum = redisClient.rpop("sql_result")
+
         response = {
             f'total price: ${sum}' 
         }
@@ -205,12 +221,19 @@ def sortSQLQueue(orderByValue, asc_desc):
     # and return it back to client in sorted order
     r = request
     try:
-        # add all data in the table to element array
-        mycursor.execute(f"SELECT * FROM {tableName} ORDER BY {orderByValue} {asc_desc}")
-        myresult = mycursor.fetchall()
-        element = []
-        for x in myresult:
-            element.append(str(x))
+        print("pushing into redis!")
+        sql_command_list = ["SORT", orderByValue, asc_desc]
+        sql_command_string = ','.join(sql_command_list) # turn the list type data into string with comma to seperate each value
+        print("current command is: " + sql_command_string + "\n")
+        redisClient.lpush("sql_command", str(sql_command_string)) 
+
+        while (redisClient.llen("sql_command") != 0):
+            print("Waiting for Worker to finish processing this SQL queury...")
+            print()
+            time.sleep(1)
+
+        element = redisClient.rpop("sql_result")
+
         response = element
 
     except Exception as e:
@@ -227,27 +250,18 @@ def deleteByID(id_to_delete):
     r = request
     try:
         # drop the row we created in table
-        print(f"drop the current row with id {id_to_delete} from table!\n")
-        sql = f"DELETE FROM {tableName} WHERE ID = {id_to_delete}"
-        mycursor.execute(sql)
-        response = {f"Successfully deleted the row with id {id_to_delete} from SQL database!"}
+        print("pushing delete command into redis!")
+        sql_command_list = ["DELETE", tableName, id_to_delete]
+        sql_command_string = ','.join(sql_command_list) # turn the list type data into string with comma to seperate each value
+        print("current command is: " + sql_command_string + "\n")
+        redisClient.lpush("sql_command", str(sql_command_string)) 
 
-        # add the id of the row we want to delete to deleted table
-        # DO NOT ADD SAME VALUE MUTIPLE TIMES, otherwise the comming id for new values in data table will increase as well
-        print(f"add the id: {id_to_delete} of the data we want to delete to deleted table!\n")
-        # normal INSERT INTO but with WHERE NOT EXISTS to check duplications
-        # reference: https://stackoverflow.com/questions/3164505/mysql-insert-record-if-not-exists-in-table
-        sql = f"INSERT INTO {deleteTableName} SELECT * FROM (SELECT ({int(id_to_delete)}) ) AS tmp WHERE NOT EXISTS (SELECT ID FROM {deleteTableName} WHERE ID = {int(id_to_delete)}) LIMIT 1"
-        mycursor.execute(sql)
-        mydb.commit()
-        print("add into deleted table successfully! Now deleted table contains:")
-        # add all data in the table to element array
-        mycursor.execute(f"SELECT * FROM {deleteTableName}")
-        myresult = mycursor.fetchall()
-        element = []
-        for x in myresult:
-            print(str(x))
-        print()
+        while (redisClient.llen("sql_command") != 0):
+            print("Waiting for Worker to finish processing this SQL queury...")
+            print()
+            time.sleep(1)
+
+        response = {f"Successfully deleted the row with id {id_to_delete} from SQL database!"}
 
     except Exception as e:
         print(e) # print the error report if we faced the exception
@@ -263,9 +277,16 @@ def deleteTable():
     r = request
     try:
         # drop the two tables we created
-        print("drop the current table!\n")
-        sql = f"DROP TABLE {tableName}, {deleteTableName}"
-        mycursor.execute(sql)
+        sql_command_list = ["DROP", tableName]
+        sql_command_string = ','.join(sql_command_list) # turn the list type data into string with comma to seperate each value
+        print("current command is: " + sql_command_string + "\n")
+        redisClient.lpush("sql_command", str(sql_command_string)) 
+
+        while (redisClient.llen("sql_command") != 0):
+            print("Waiting for Worker to finish processing this SQL queury...")
+            print()
+            time.sleep(1)
+        
         response = {"Successfully deleted all tables from SQL database!"}
 
     except Exception as e:

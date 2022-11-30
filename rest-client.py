@@ -36,29 +36,29 @@ def mkReq(reqmethod, endpoint, data, verbose=True):
             f"response code is {response.status_code}, raw response is {response.text}")
         return response.text
 
-for shopping_data in glob.glob("data/*json"):
-    print(f"Grab {shopping_data}")
-    print('sending shopping data to REST server...')
-    
-    # send the json data here
-    mkReq(requests.post, "apiv1/add",
-        data={
-            "shopping": base64.b64encode( open(shopping_data, "rb").read() ).decode('utf-8'),
-            "callback": {
-                "url": "http://localhost:5000",
-                "data": {"shopping": 'this is the shopping data under callback!', 
-                         "data": "to be returned"}
-            }
-        },
-        verbose=True
-        )
+# for shopping_data in glob.glob("data/*json"):
+#     print(f"Grab {shopping_data}")
+#     print('sending shopping data to REST server...')
 
-    # check current data in redis
-    print('current REDIS database contains the following data:')
-    mkReq(requests.get, "apiv1/queue", data=None)
+#     # send the json data here
+#     mkReq(requests.post, "apiv1/add",
+#         data={
+#             "shopping": base64.b64encode( open(shopping_data, "rb").read() ).decode('utf-8'),
+#             "callback": {
+#                 "url": "http://localhost:5000",
+#                 "data": {"shopping": 'this is the shopping data under callback!', 
+#                          "data": "to be returned"}
+#             }
+#         },
+#         verbose=True
+#         )
+
+#     # check current data in redis
+#     print('current REDIS database contains the following data:')
+#     mkReq(requests.get, "apiv1/queue", data=None)
     
-    # send the next data after 1 second
-    time.sleep(1)
+#     # send the next data after 1 second
+#     time.sleep(1)
 
 # check current data in table
 print('\ncurrent table in SQL database contains the following data:')
@@ -73,7 +73,7 @@ print('\ndelete the current data from the table.')
 mkReq(requests.get, "apiv1/deleteByID/2", data=None)
 mkReq(requests.get, "apiv1/sqlqueue", data=None)
 
-# return the total cost of all the products listed in the current table
+# # return the total cost of all the products listed in the current table
 print('\ntotal price of the products listed above is: ')
 mkReq(requests.get, "apiv1/sumPrice", data=None)
 
