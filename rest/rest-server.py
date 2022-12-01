@@ -63,45 +63,6 @@ sqldatabasename = 'TEST_DB' #'project_database'
 deleteTableName = 'DELETED_DATA'
 tableName = 'customer'
 
-# # connect to SQL server
-# print("connecting to MySQL server...\n")
-# mydb = mysql.connector.connect(
-#         host="localhost",
-#         user="root",
-#         password="test1234")
-# mycursor = mydb.cursor() # mycursor now reference to the whole sql server
-# print("Successfully connected to the SQL database!\n")
-
-# # create a database in this SQL server
-# mycursor.execute("CREATE DATABASE IF NOT EXISTS " + sqldatabasename)
-# print("Current databases in the SQL server are:")
-# mycursor.execute("SHOW DATABASES")
-# for x in mycursor:
-#   print(x)
-# print()
-
-# # connect to the specific database
-# mydb = mysql.connector.connect(
-#         host="localhost",
-#         user="root",
-#         password="test1234",
-#         database=sqldatabasename)
-# print("Successfully connected to: " + sqldatabasename + "!\n")
-
-# mycursor = mydb.cursor() # mycursor now reference to the database we pointed to
-
-# # create the table we need if it does not exist with all column names and data types
-# # remember to DELETE THE WHOLE TABLE AND RECREATE IT if datatype for an EXISTING column has been changed
-# # set id as primary key and allow it to be automatically generated everytime we plug in new row
-# mycursor.execute(f"CREATE TABLE if not exists {tableName} (ID INT NOT NULL AUTO_INCREMENT, Name VARCHAR(255), Product VARCHAR(255), Price DECIMAL(9,3), Date VARCHAR(255), PRIMARY KEY (ID))") # DECIMAL(9,3) means we can have up to 6 places before the decimal and a decimal of up to 3 places
-# mycursor.execute(f"CREATE TABLE if not exists {deleteTableName} (ID INT)") # only stores deleted id - NOT IN USE RIGHT NOW since now ID for each row will be automatically generated
-
-# print("Tables in the current database:")
-# mycursor.execute("SHOW TABLES")
-# for x in mycursor:
-#   print(x)
-# print()
-
 # method definition: by mentioning "GET", "POST", "DELETE" in methods=[], we allow the client side (in our case it is the rest-client.py)
 # to have the corresponding ability to call requests.get/post/delete
 # route http posts to this method
@@ -120,9 +81,6 @@ def addData():
         sql_command_string = ','.join(sql_command_list) # turn the list type data into string with comma to seperate each value
         print("current command is: " + sql_command_string + "\n")
         redisClient.lpush("sql_command", str(sql_command_string)) 
-        
-        # use the following command to delete all value related to the given key
-        # redisClient.delete("sql_command")
         
         print("length right now at lpush stage is: " + str(redisClient.llen("sql_command")) + "\n")
         
@@ -164,17 +122,11 @@ def showSQLQueue():
             print()
             time.sleep(1)
 
-        # element_encoded = redisClient.rpop("sql_result")
-        # element_decoded = base64.b64decode(element_encoded) 
-        # element = json.loads(element_decoded)
-
-        # element = []
-        # while (redisClient.llen("sql_result") != 0):
-        #     element.append(redisClient.rpop("sql_result"))
-
-        element = redisClient.rpop("sql_result")
-        print("received: ")
-        print(element)
+        element = []
+        while (redisClient.llen("sql_result") != 0): # will return 1 row in 1 REDIS storage, so we need to add them all
+            row = redisClient.rpop("sql_result") # get the current row from REDIS
+            row = str(row).replace("b\"", '').replace("\"",'') # clean out the extra chars added from REDIS
+            element.append(row)
 
         response = element
 
@@ -204,6 +156,13 @@ def sumPrice():
 
         sum = redisClient.rpop("sql_result")
 
+        # clean out extra value added during process from REDIS
+        print("sum received: ")
+        print(sum)
+        print("after cleaning:")
+        sum = float(str(sum).replace("b'", '').replace("'",'')) 
+        print(str(sum) + "\n")
+
         response = {
             f'total price: ${sum}' 
         }
@@ -232,7 +191,11 @@ def sortSQLQueue(orderByValue, asc_desc):
             print()
             time.sleep(1)
 
-        element = redisClient.rpop("sql_result")
+        element = []
+        while (redisClient.llen("sql_result") != 0): # will return 1 row in 1 REDIS storage, so we need to add them all
+            row = redisClient.rpop("sql_result") # get the current row from REDIS
+            row = str(row).replace("b\"", '').replace("\"",'') # clean out the extra chars added from REDIS
+            element.append(row)
 
         response = element
 

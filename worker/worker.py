@@ -82,8 +82,8 @@ for x in mycursor:
 print()
 
 # Clean out redis value in these key if needed during development process
-# redisClient.delete("sql_result")
-# redisClient.delete("sql_command")
+redisClient.delete("sql_result")
+redisClient.delete("sql_command")
 
 def log_debug(message, key=debugKey):
     print("DEBUG:", message, file=sys.stdout)
@@ -108,7 +108,7 @@ try:
             print(current_command_from_redis)
 
             log_debug("after cleanning name:")
-            # clean keyword to match with the one uploaded in rest server
+            # clean keyword to match with the one uploaded from rest server
             current_command_from_redis = list(str(current_command_from_redis).replace("b'", '').replace("'",'').split(",")) 
             print(current_command_from_redis)
 
@@ -145,7 +145,6 @@ try:
                     element.append(str(x))
                 
                 print(str(element))
-                # element_encoded = base64.b64encode(str(element)).decode('utf-8')
                 # return the result back to REDIS with a different tag for rest server to grab from
                 redisClient.lpush("sql_result", *element) 
 
@@ -159,6 +158,7 @@ try:
                 mydb.commit()
                 myresult = mycursor.fetchall()
                 sum = myresult[0][0] # [0][0] to get that value from returned list, which is the total price
+                print("sum is: " + str(sum))
                 
                 # return the result back to REDIS with a different tag for rest server to grab from
                 redisClient.lpush("sql_result", str(sum)) 
@@ -180,7 +180,7 @@ try:
                     element.append(str(x))
                 
                 # return the result back to REDIS with a different tag for rest server to grab from
-                redisClient.lpush("sql_result", str(element)) 
+                redisClient.lpush("sql_result", *element) 
             
             elif (command_type == "DELETE"):
                 log_debug("entering sql command for deletion!")
