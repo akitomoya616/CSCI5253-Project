@@ -212,7 +212,8 @@ try:
                 type = [i for i in current_command_from_redis] # type = EXTRA in this case, not gonna be used
 
                 # grab the data from sql table for later trasformation from rows to df format
-                sql_query = pd.read_sql(f"SELECT * FROM {tableName}", mydb)
+                # pre-sort the result in asc or desc order so df can create a graph using date from oldest to newest time
+                sql_query = pd.read_sql(f"SELECT * FROM {tableName} ORDER BY Date ASC", mydb)
                 print(sql_query)
 
                 # Convert SQL to DataFrame
