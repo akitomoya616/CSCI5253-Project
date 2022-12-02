@@ -58,7 +58,16 @@ def mkReq_pic(reqmethod, endpoint, data, verbose=True):
         # save the pic to diectory pics, since rest client is in the default directory, the pics folder will be there too
         if not os.path.exists('pics'):
             os.mkdir('pics')
-        image = img.save("pics/image.png")
+        
+        file_location = "pics/image0.png"
+        i = 1
+        while os.path.exists(file_location):
+            print("filename  already exists! Changing the filename...")
+            file_location = f"pics/image{str(i)}.png"
+            i += 1
+
+        print("Now the filename can be used!")
+        image = img.save(file_location)
         print("image saved into pics directory successfully!")
         return
     else:
