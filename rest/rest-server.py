@@ -22,7 +22,6 @@ import json
 # extra libray imported by Sitong Lu
 import redis
 import os
-from minio import Minio
 import time
 import io
 from PIL import Image
@@ -45,19 +44,6 @@ redisHost = os.getenv("REDIS_HOST") or "localhost"
 redisPort = os.getenv("REDIS_PORT") or 6379
 redisClient = redis.StrictRedis(host=redisHost, port=redisPort, db=0)
 print("Successfully connected to the REDIS server!\n")
-
-# set minio host and port for connection
-minioHost = os.getenv("MINIO_HOST") or "localhost:9000"
-minioUser = os.getenv("MINIO_USER") or "rootuser"
-minioPasswd = os.getenv("MINIO_PASSWD") or "rootpass123"
-
-minioClient = Minio(minioHost,
-               secure=False,
-               access_key=minioUser,
-               secret_key=minioPasswd)
-print("Successfully connected to the minIO server!\n")
-
-bucketname='CSCI5253-Project' # for minio bucket setup and referenc
 
 # set sql database and table value for later use
 sqldatabasename = 'TEST_DB' #'project_database'
@@ -94,7 +80,7 @@ def addData():
         
         # wait till worker finishing process this sql query and pop it out from redis
         # in general, there's only gonna have 1 query in redis between the following process 
-        # rest post data to redis - worker process it and upload everything to minio 
+        # rest post data to redis - worker process it and upload result back to redis
         # - worker pop it out from redis - rest post another data to redis
         while (redisClient.llen("sql_command") != 0):
             print("Waiting for Worker to finish processing this SQL queury...")

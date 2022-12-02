@@ -2,7 +2,6 @@ import sys
 import redis
 import os
 import platform
-from minio import Minio
 
 import base64
 import glob
@@ -20,25 +19,8 @@ redisHost = os.getenv("REDIS_HOST") or "localhost"
 redisPort = os.getenv("REDIS_PORT") or 6379
 redisClient = redis.StrictRedis(host=redisHost, port=redisPort, db=0)
 
-minioHost = os.getenv("MINIO_HOST") or "localhost:9000"
-minioUser = os.getenv("MINIO_USER") or "rootuser"
-minioPasswd = os.getenv("MINIO_PASSWD") or "rootpass123"
-bucketname='CSCI5253-Project'
-
-# set minio host and port for connection
-minioHost = os.getenv("MINIO_HOST") or "localhost:9000"
-minioUser = os.getenv("MINIO_USER") or "rootuser"
-minioPasswd = os.getenv("MINIO_PASSWD") or "rootpass123"
-
-minioClient = Minio(minioHost,
-               secure=False,
-               access_key=minioUser,
-               secret_key=minioPasswd)
-
-bucketname='CSCI5253-Project' # for minio bucket setup and reference
-
 # set sql database and table value for later use
-sqldatabasename = 'TEST_DB' #'project_database'
+sqldatabasename = 'project_database'
 deleteTableName = 'DELETED_DATA'
 tableName = 'customer'
 

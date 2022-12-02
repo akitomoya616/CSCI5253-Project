@@ -1,4 +1,4 @@
-VERSION=v1
+VERSION=v2
 DOCKERUSER = sitonglu# PUT_YOUR_DOCKER_ID_HERE
 
 #
@@ -14,7 +14,7 @@ build:
 # hub.docker.io
 #
 push:
-	docker tag logs  $(DOCKERUSER)/demucs-logs:$(VERSION)
-	docker push $(DOCKERUSER)/demucs-logs:$(VERSION)
-	docker tag logs  $(DOCKERUSER)/demucs-logs:latest
-	docker push $(DOCKERUSER)/demucs-logs:latest
+	docker tag logs  $(DOCKERUSER)/project-logs:$(VERSION)
+	docker push $(DOCKERUSER)/project-logs:$(VERSION)
+	docker tag logs  $(DOCKERUSER)/project-logs:latest
+	docker push $(DOCKERUSER)/project-logs:latest
