@@ -25,6 +25,7 @@ import os
 from minio import Minio
 import time
 import io
+from PIL import Image
 
 import mysql.connector
 from mysql.connector import Error
@@ -66,6 +67,12 @@ tableName = 'customer'
 # method definition: by mentioning "GET", "POST", "DELETE" in methods=[], we allow the client side (in our case it is the rest-client.py)
 # to have the corresponding ability to call requests.get/post/delete
 # route http posts to this method
+
+# ALL the methods created below will just take the necessary parameter for processing the SQL query to REDIS
+# and let worker grab the data from REDIS, process it, and return the result back to REDIS if necessary
+# REST server will then grab the result from there, beautify the result a little bit through editing
+# and return it back to client as response
+
 @app.route('/apiv1/add', methods=['POST'])
 def addData():
     r = request
@@ -77,6 +84,7 @@ def addData():
         shopping_data = json.loads(shopping_data_decoded) 
         
         print("pushing into redis!")
+        # pass the necessary parmeters for forming the correspnding SQL query to REDIS
         sql_command_list = ["INSERT", str(shopping_data['name']), str(shopping_data['product']), str(float(shopping_data['price'])), str(shopping_data['date'])]
         sql_command_string = ','.join(sql_command_list) # turn the list type data into string with comma to seperate each value
         print("current command is: " + sql_command_string + "\n")
@@ -84,8 +92,8 @@ def addData():
         
         print("length right now at lpush stage is: " + str(redisClient.llen("sql_command")) + "\n")
         
-        # wait till worker finishing process this mp3 file and pop it out from redis
-        # in general, there's only gonna have 1 file in redis between the following process 
+        # wait till worker finishing process this sql query and pop it out from redis
+        # in general, there's only gonna have 1 query in redis between the following process 
         # rest post data to redis - worker process it and upload everything to minio 
         # - worker pop it out from redis - rest post another data to redis
         while (redisClient.llen("sql_command") != 0):
@@ -122,6 +130,7 @@ def showSQLQueue():
             print()
             time.sleep(1)
 
+        # grab the result from REDIS and form them back into a list type
         element = []
         while (redisClient.llen("sql_result") != 0): # will return 1 row in 1 REDIS storage, so we need to add them all
             row = redisClient.rpop("sql_result") # get the current row from REDIS
@@ -259,9 +268,37 @@ def deleteTable():
     response_pickled = jsonpickle.encode(response)
     return Response(response=response_pickled, status=200, mimetype="application/json")
 
+@app.route('/apiv1/extra', methods=['GET'])
+def extra():
+    # get the list of data stored in sql database's table now
+    # and return it back to client
+    r = request
+    try:
+        print("pushing into redis!")
+        sql_command_list = ["EXTRA"]
+        sql_command_string = ','.join(sql_command_list) # turn the list type data into string with comma to seperate each value
+        print("current command is: " + sql_command_string + "\n")
+        redisClient.lpush("sql_command", str(sql_command_string)) 
 
+        while (redisClient.llen("sql_command") != 0):
+            print("Waiting for Worker to finish processing this SQL queury...")
+            print()
+            time.sleep(1)
+        
+        pic_encoded = redisClient.rpop("sql_result") # get the current encoded pic data from REDIS
+        # clean out encoded data that has extra b' values added during transition from REDIS
+        pic_encoded = str(pic_encoded).replace("b'", '').replace("'",'')
 
+        # just pass this encoded pic data to client
+        # DO NOT pass the decoded one cause the long byte will be somehow limited by the time client get it
+        response = pic_encoded
+    
+    except Exception as e:
+        print(e) # print the error report if we faced the exception
+        response = {'Failed to load & sort data from the table in SQL database.'}
 
+    response_pickled = jsonpickle.encode(response)
+    return Response(response=response_pickled, status=200, mimetype="application/json")
 
 
 
@@ -283,40 +320,6 @@ def showQueue(): # dump the queued entries from the Redis database
     except Exception as e:
         print(e) # print the error report if we faced the exception
         response = {'failed to load cache from server'}
-
-    response_pickled = jsonpickle.encode(response)
-    return Response(response=response_pickled, status=200, mimetype="application/json")
-
-@app.route('/apiv1/track/<string:songName>/<string:instrumentName>', methods=['GET']) # <string:songhash>
-def retrieveTrack(songName, instrumentName): # retrieve the track ( any of bass.mp3, vocals.mp3, drums.mp3, other.mp3) as a binary download
-    r = request
-
-    file_to_download = "data/output/mdx_extra_q/" + songName + '/' + instrumentName
-
-    try:
-        # download the file here
-        minioClient.fget_object(bucketname, file_to_download, "data/downloadForTrack/"+ songName + '/' + instrumentName)
-        response = {'Download success! Now Playing the music.'}
-
-    except Exception as e:
-        print(e) # print the error report if we faced the exception
-        response = {'Failed to download the track from MinIO, target file in the corresponding does not exist'}
-
-    response_pickled = jsonpickle.encode(response)
-    return Response(response=response_pickled, status=200, mimetype="application/json")
-
-@app.route('/apiv1/remove/<string:songName>/<string:instrumentName>', methods=['GET'])
-def removeTrack(songName, instrumentName): # remove the corresponding track
-    r = request
-    file_to_remove = "data/output/mdx_extra_q/" + songName + '/' + instrumentName
-
-    try:
-        minioClient.remove_object(bucketname, file_to_remove)
-        response = {'Remove success!'}
-
-    except Exception as e:
-        print(e) # print the error report if we faced the exception
-        response = {'Failed to remove the track from MinIO, target file in the corresponding does not exist'}
 
     response_pickled = jsonpickle.encode(response)
     return Response(response=response_pickled, status=200, mimetype="application/json")

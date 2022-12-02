@@ -5,11 +5,12 @@ import platform
 from minio import Minio
 
 import base64
-import hashlib
+import glob
 
 import mysql.connector
 from mysql.connector import Error
 import pandas as pd
+import time
 
 pw = 'test1234' # password created in MySQL server
 infoKey = "{}.rest.info".format(platform.node())
@@ -167,7 +168,7 @@ try:
                 log_debug("entering sql command for queuing!")
 
                 log_debug("assign values gained from sql command")
-                type, orderByValue, asc_desc = [i for i in current_command_from_redis] # type = INSERT in this case, not gonna be used
+                type, orderByValue, asc_desc = [i for i in current_command_from_redis] # type = SORT in this case, not gonna be used
                 
                 log_debug("generate SQL command")
                 sql = f"SELECT * FROM {tableName} ORDER BY {orderByValue} {asc_desc}"
@@ -194,9 +195,9 @@ try:
                 mydb.commit()
             
             elif (command_type == "DROP"):
-                log_debug("entering table sql command for dropping!")
+                log_debug("entering sql command for dropping!")
                 log_debug("assign values gained from sql command")
-                type, table_name = [i for i in current_command_from_redis] # type = DELETE in this case, not gonna be used
+                type, table_name = [i for i in current_command_from_redis] # type = DROP in this case, not gonna be used
 
                 log_debug("generate SQL command")
                 sql = f"DROP TABLE {table_name}"
@@ -204,6 +205,38 @@ try:
                 mycursor.execute("commit ")
                 mycursor.execute(sql)
                 mydb.commit()
+
+            elif (command_type == "EXTRA"):
+                log_debug("entering sql command for extra feature!")
+                log_debug("assign values gained from sql command")
+                type = [i for i in current_command_from_redis] # type = EXTRA in this case, not gonna be used
+
+                # grab the data from sql table for later trasformation from rows to df format
+                sql_query = pd.read_sql(f"SELECT * FROM {tableName}", mydb)
+                print(sql_query)
+
+                # Convert SQL to DataFrame
+                df = pd.DataFrame(sql_query)
+                print("df generated is:")
+                print(df)
+
+                # plot a price based on data diagram
+                plot = df.plot(x ='Date', y='Price', kind='line')
+                fig = plot.get_figure()
+                # create a directory under worker directory called pics
+                if not os.path.exists('pics'):
+                    os.mkdir('pics')
+                # and save the diagram genereated in png format in there
+                fig.savefig('pics/date_price.png')
+
+                for pic_data in glob.glob("pics/*png"):
+                    print('sending pic data to REDIS for rest server to grab from...')
+
+                    # return the result back to REDIS with a different tag for rest server to grab from
+                    redisClient.lpush("sql_result", base64.b64encode( open(pic_data, "rb").read() ).decode('utf-8')) 
+                    
+                    # send the next data after 1 second
+                    time.sleep(1)
 
             else:
                 log_debug("not a valid sql command!")
