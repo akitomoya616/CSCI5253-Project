@@ -7,6 +7,8 @@ import sys
 import base64
 import glob
 import time
+import io
+from PIL import Image
 
 #
 # Use localhost & port 5000 if not specified by environment variable REST
@@ -36,9 +38,47 @@ def mkReq(reqmethod, endpoint, data, verbose=True):
             f"response code is {response.status_code}, raw response is {response.text}")
         return response.text
 
+# special mkReq just for returning pic file without printing the reponse
+def mkReq_pic(reqmethod, endpoint, data, verbose=True):
+    print(f"Response to http://{REST}/{endpoint} request is {type(data)}")
+    jsonData = jsonpickle.encode(data)
+    if verbose and data != None:
+        print(f"Make request http://{REST}/{endpoint} with json {data.keys()}")
+    response = reqmethod(f"http://{REST}/{endpoint}", data=jsonData,
+                         headers={'Content-type': 'application/json'})
+    if response.status_code == 200:
+        image_data = json.dumps(response.json(), indent=4, sort_keys=True)
+        image_data = base64.b64decode(image_data) # decode the pic
+
+        # load the pic
+        ioBuffer = io.BytesIO(image_data)
+        img = Image.open(ioBuffer)
+        print("image taken from rest server successfully!")
+
+        # save the pic to diectory pics, since rest client is in the default directory, the pics folder will be there too
+        if not os.path.exists('pics'):
+            os.mkdir('pics')
+        
+        file_location = "pics/image0.png"
+        i = 1
+        while os.path.exists(file_location):
+            print("filename  already exists! Changing the filename...")
+            file_location = f"pics/image{str(i)}.png"
+            i += 1
+
+        print("Now the filename can be used!")
+        image = img.save(file_location)
+        print("image saved into pics directory successfully!")
+        return
+    else:
+        print(
+            f"response code is {response.status_code}, raw response is {response.text}")
+        return response.text
+
 for shopping_data in glob.glob("data/*json"):
     print(f"Grab {shopping_data}")
     print('sending shopping data to REST server...')
+
     # send the json data here
     mkReq(requests.post, "apiv1/add",
         data={
@@ -51,9 +91,10 @@ for shopping_data in glob.glob("data/*json"):
         },
         verbose=True
         )
+
     # check current data in redis
-    # print('current REDIS database contains the following data:')
-    # mkReq(requests.get, "apiv1/queue", data=None)
+    print('current REDIS database contains the following data:')
+    mkReq(requests.get, "apiv1/queue", data=None)
     
     # send the next data after 1 second
     time.sleep(1)
@@ -75,21 +116,8 @@ mkReq(requests.get, "apiv1/sqlqueue", data=None)
 print('\ntotal price of the products listed above is: ')
 mkReq(requests.get, "apiv1/sumPrice", data=None)
 
-
-
-
-
-
-# delete the table from sql database - WILL NOT BE USED BY USER since they do not have the rights to elimiate a general table
-# print('\ndelete the current tables.')
-# mkReq(requests.get, "apiv1/deleteTable", data=None)
-
-# do two more requests:
-# now we can only do the following 2 tests in short but not in sample-requests.py
-# because the hash for each file is just the filename but not the actual hashed bits
-# the full length file name contains space and cannot be used under this situation
-
-# mkReq(requests.get, "apiv1/track/short-hop/drums.wav", data=None)
-# mkReq(requests.get, "apiv1/remove/short-hop/drums.wav", data=None)
+# EXTRA FEATURE
+print('\diagram representing the relation between date and price is: ')
+mkReq_pic(requests.get, "apiv1/extra", data=None)
 
 sys.exit(0)
