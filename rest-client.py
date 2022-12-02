@@ -120,10 +120,4 @@ mkReq(requests.get, "apiv1/sumPrice", data=None)
 print('\diagram representing the relation between date and price is: ')
 mkReq_pic(requests.get, "apiv1/extra", data=None)
 
-
-
-# delete the table from sql database - WILL NOT BE USED BY USER since they do not have the rights to elimiate a general table
-# print('\ndelete the current tables.')
-# mkReq(requests.get, "apiv1/deleteTable", data=None)
-
 sys.exit(0)
