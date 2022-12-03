@@ -1,7 +1,7 @@
 FROM python:3.6-alpine
 LABEL MAINTAINER="493904592@qq.com"
 
-RUN  pip3 install --upgrade redis minio flask jsonpickle requests
+RUN  pip3 install --upgrade pip redis minio flask jsonpickle requests
 
 WORKDIR /srv
 

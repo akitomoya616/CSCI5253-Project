@@ -1,10 +1,10 @@
-VERSION=v18
+VERSION=v5
 DOCKERUSER=sitonglu
 
 build:
-	docker build -f Dockerfile -t demucs-worker .
+	docker build -f Dockerfile -t project-worker .
 push:
-	docker tag demucs-worker $(DOCKERUSER)/demucs-worker:$(VERSION)
-	docker push $(DOCKERUSER)/demucs-worker:$(VERSION)
-	docker tag demucs-worker $(DOCKERUSER)/demucs-worker:latest
-	docker push $(DOCKERUSER)/demucs-worker:latest
+	docker tag project-worker $(DOCKERUSER)/project-worker:$(VERSION)
+	docker push $(DOCKERUSER)/project-worker:$(VERSION)
+	docker tag project-worker $(DOCKERUSER)/project-worker:latest
+	docker push $(DOCKERUSER)/project-worker:latest

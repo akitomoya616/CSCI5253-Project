@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: master
-        image: sitonglu/demucs-worker:latest
+        image: sitonglu/project-worker:latest
         resources:
           requests:
             cpu: 100m

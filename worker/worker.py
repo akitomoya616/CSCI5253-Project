@@ -12,6 +12,7 @@ import pandas as pd
 import time
 
 pw = 'test1234' # password created in MySQL server
+
 infoKey = "{}.rest.info".format(platform.node())
 debugKey = "{}.rest.debug".format(platform.node())
 
