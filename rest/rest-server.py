@@ -23,14 +23,6 @@ import json
 import redis
 import os
 import time
-import io
-from PIL import Image
-
-import mysql.connector
-from mysql.connector import Error
-import pandas as pd
-
-pw = 'test1234' # password created in MySQL server
 
 # Initialize the Flask application
 app = Flask(__name__)

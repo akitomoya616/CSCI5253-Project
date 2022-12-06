@@ -1,11 +1,11 @@
-VERSION=v13
+VERSION=v1
 DOCKERUSER = sitonglu
 
 build:
-	docker build -f Dockerfile -t demucs-rest .
+	docker build -f Dockerfile -t project-rest .
 
 push:
-	docker tag demucs-rest $(DOCKERUSER)/demucs-rest:$(VERSION)
-	docker push $(DOCKERUSER)/demucs-rest:$(VERSION)
-	docker tag demucs-rest $(DOCKERUSER)/demucs-rest:latest
-	docker push $(DOCKERUSER)/demucs-rest:latest
+	docker tag project-rest $(DOCKERUSER)/project-rest:$(VERSION)
+	docker push $(DOCKERUSER)/project-rest:$(VERSION)
+	docker tag project-rest $(DOCKERUSER)/project-rest:latest
+	docker push $(DOCKERUSER)/project-rest:latest

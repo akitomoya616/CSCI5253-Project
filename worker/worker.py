@@ -12,6 +12,7 @@ import pandas as pd
 import time
 
 pw = 'test1234' # password created in MySQL server
+
 infoKey = "{}.rest.info".format(platform.node())
 debugKey = "{}.rest.debug".format(platform.node())
 
@@ -27,7 +28,7 @@ tableName = 'customer'
 # connect to SQL server
 print("connecting to MySQL server...\n")
 mydb = mysql.connector.connect(
-        host="localhost",
+        host="mysql", # host name is the name of the container been deployed in .deployment, if everything is running on localhost then it is "localhost"
         user="root",
         password="test1234")
 mycursor = mydb.cursor() # mycursor now reference to the whole sql server
@@ -43,7 +44,7 @@ print()
 
 # connect to the specific database
 mydb = mysql.connector.connect(
-        host="localhost",
+        host="mysql", # host name is the name of the container been deployed in .deployment, if everything is running on localhost then it is "localhost"
         user="root",
         password="test1234",
         database=sqldatabasename)
@@ -98,6 +99,9 @@ try:
             command_type = current_command_from_redis[0]
 
             if (command_type == "INSERT"):
+                # create the table again just in case it got deleted later after running into drop table method
+                mycursor.execute(f"CREATE TABLE if not exists {tableName} (ID INT NOT NULL AUTO_INCREMENT, Name VARCHAR(255), Product VARCHAR(255), Price DECIMAL(9,3), Date VARCHAR(255), PRIMARY KEY (ID))")
+                
                 log_debug("entering sql command for insertion!")
                 log_debug("assign values gained from sql command")
                 type, name, product, price, date = [i for i in current_command_from_redis] # type = INSERT in this case, not gonna be used
@@ -224,7 +228,7 @@ try:
             else:
                 log_debug("not a valid sql command!")
             
-            log_debug("exiting sql command!")
+            log_debug("finish processing, exiting sql command!")
             redisClient.rpop("sql_command")
 
             print()
