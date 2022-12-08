@@ -1,4 +1,7 @@
 #!/bin/sh
+
+# use chmod 777 deploy-all.sh on Google Cloude before we can call ./deploy-all.sh on terminal
+
 kubectl apply -f redis/redis-deployment.yaml
 kubectl apply -f redis/redis-service.yaml
 

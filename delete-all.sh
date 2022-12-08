@@ -1,3 +1,7 @@
+#!/bin/sh
+
+# use chmod 777 delete-all.sh on Google Cloude before we can call ./delete-all.sh on terminal
+
 # DELETION
 
 # for redis:
