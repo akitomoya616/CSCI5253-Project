@@ -2,7 +2,7 @@
 # See https://kubernetes.io/docs/concepts/services-networking/ingress/
 #
 
-# ingress deployment for local environment testing ONLY!
+# ingress deployment for GKE testing ONLY!
 
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -14,11 +14,8 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-body-size: 16m
 spec:
   rules:
-#
-# Your ingress rules here
-# Copied from https://kubernetes.io/docs/concepts/services-networking/ingress/
-  - host: localhost
-    http:
+# removed the host section comparing with rest-ingress.yaml
+  - http:
       paths:
       - path: /
         pathType: Prefix
