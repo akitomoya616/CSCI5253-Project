@@ -7,5 +7,6 @@ WORKDIR /srv
 
 COPY    rest-server.py /srv
 
-EXPOSE 5000
-CMD [ "python", "rest-server.py"]
+# EXPOSE 5000
+# CMD [ "python", "rest-server.py"]
+CMD [ "python3", "rest-server.py", "--host", "0.0.0.0"]

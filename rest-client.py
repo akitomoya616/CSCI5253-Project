@@ -15,7 +15,7 @@ from PIL import Image
 #
 
 # localhost for connection on pod, and localhost:5000 for connection to local test (so we run python rest-server.py on terminal)
-REST = os.getenv("REST") or "localhost" #"localhost:5000"
+REST = os.getenv("REST") or "34.160.168.140:8080" #"localhost:5000"
 
 ##
 # The following routine makes a JSON REST query of the specified type

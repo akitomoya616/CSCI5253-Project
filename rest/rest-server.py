@@ -280,6 +280,8 @@ def extra():
 
 
 
+
+
 @app.route('/apiv1/queue', methods=['GET'])
 def showQueue(): # dump the queued entries from the Redis database
     # get the list of files stored in radis now
@@ -298,6 +300,22 @@ def showQueue(): # dump the queued entries from the Redis database
     except Exception as e:
         print(e) # print the error report if we faced the exception
         response = {'failed to load cache from server'}
+
+    response_pickled = jsonpickle.encode(response)
+    return Response(response=response_pickled, status=200, mimetype="application/json")
+
+@app.route('/apiv1/a', methods=['GET'])
+def a():
+    # get the list of data stored in sql database's table now
+    # and return it back to client in sorted order
+    r = request
+    try:
+        
+        response = {"Successfully connect to it!"}
+
+    except Exception as e:
+        print(e) # print the error report if we faced the exception
+        response = {'Failed to delete table in SQL database.'}
 
     response_pickled = jsonpickle.encode(response)
     return Response(response=response_pickled, status=200, mimetype="application/json")
