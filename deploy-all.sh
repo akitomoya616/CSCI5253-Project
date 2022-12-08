@@ -2,6 +2,8 @@
 kubectl apply -f redis/redis-deployment.yaml
 kubectl apply -f redis/redis-service.yaml
 
+# for rest deployment on GKE, don't forget to follow the tutorial https://kubernetes.github.io/ingress-nginx/deploy/#docker-for-mac
+# to install ingress extention on Google Cloud
 kubectl apply -f rest/rest-deployment.yaml
 kubectl apply -f rest/rest-service.yaml
 kubectl apply -f rest/rest-ingress-gke.yaml # or kubectl apply -f rest/rest-ingress.yaml
