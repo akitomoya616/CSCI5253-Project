@@ -22,7 +22,6 @@ redisClient = redis.StrictRedis(host=redisHost, port=redisPort, db=0)
 
 # set sql database and table value for later use
 sqldatabasename = 'project_database'
-deleteTableName = 'DELETED_DATA'
 tableName = 'customer'
 
 # connect to SQL server
@@ -57,7 +56,6 @@ mycursor = mydb.cursor(buffered=True) # mycursor now reference to the database w
 # remember to DELETE THE WHOLE TABLE AND RECREATE IT if datatype for an EXISTING column has been changed
 # set id as primary key and allow it to be automatically generated everytime we plug in new row
 mycursor.execute(f"CREATE TABLE if not exists {tableName} (ID INT NOT NULL AUTO_INCREMENT, Name VARCHAR(255), Product VARCHAR(255), Price DECIMAL(9,3), Date VARCHAR(255), PRIMARY KEY (ID))") # DECIMAL(9,3) means we can have up to 6 places before the decimal and a decimal of up to 3 places
-mycursor.execute(f"CREATE TABLE if not exists {deleteTableName} (ID INT)") # only stores deleted id - NOT IN USE RIGHT NOW since now ID for each row will be automatically generated
 
 print("Tables in the current database:")
 mycursor.execute("SHOW TABLES")
@@ -172,10 +170,10 @@ try:
             elif (command_type == "DELETE"):
                 log_debug("entering sql command for deletion!")
                 log_debug("assign values gained from sql command")
-                type, table_name, id_to_delete = [i for i in current_command_from_redis] # type = DELETE in this case, not gonna be used
+                type, id_to_delete = [i for i in current_command_from_redis] # type = DELETE in this case, not gonna be used
                 
                 log_debug("generate SQL command")
-                sql = f"DELETE FROM {table_name} WHERE ID = {id_to_delete}"
+                sql = f"DELETE FROM {tableName} WHERE ID = {id_to_delete}"
                 log_debug("execute SQL command")
                 mycursor.execute(sql)
                 mydb.commit()
@@ -183,10 +181,10 @@ try:
             elif (command_type == "DROP"):
                 log_debug("entering sql command for dropping!")
                 log_debug("assign values gained from sql command")
-                type, table_name = [i for i in current_command_from_redis] # type = DROP in this case, not gonna be used
+                type = [i for i in current_command_from_redis] # type = DROP in this case, not gonna be used
 
                 log_debug("generate SQL command")
-                sql = f"DROP TABLE {table_name}"
+                sql = f"DROP TABLE {tableName}"
                 log_debug("execute SQL command")
                 mycursor.execute("commit ")
                 mycursor.execute(sql)

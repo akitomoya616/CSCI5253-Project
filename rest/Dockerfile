@@ -7,5 +7,9 @@ WORKDIR /srv
 
 COPY    rest-server.py /srv
 
-EXPOSE 5000
-CMD [ "python", "rest-server.py"]
+# For testing on local environment ONLY - don't forget to re-make build and push after un-comment these!
+# EXPOSE 5000
+# CMD [ "python", "rest-server.py"]
+
+# For testing on GKE
+CMD [ "python3", "rest-server.py", "--host", "0.0.0.0"]

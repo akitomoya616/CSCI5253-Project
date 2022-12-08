@@ -37,11 +37,6 @@ redisPort = os.getenv("REDIS_PORT") or 6379
 redisClient = redis.StrictRedis(host=redisHost, port=redisPort, db=0)
 print("Successfully connected to the REDIS server!\n")
 
-# set sql database and table value for later use
-sqldatabasename = 'TEST_DB' #'project_database'
-deleteTableName = 'DELETED_DATA'
-tableName = 'customer'
-
 # method definition: by mentioning "GET", "POST", "DELETE" in methods=[], we allow the client side (in our case it is the rest-client.py)
 # to have the corresponding ability to call requests.get/post/delete
 # route http posts to this method
@@ -201,7 +196,7 @@ def deleteByID(id_to_delete):
     try:
         # drop the row we created in table
         print("pushing delete command into redis!")
-        sql_command_list = ["DELETE", tableName, id_to_delete]
+        sql_command_list = ["DELETE", id_to_delete]
         sql_command_string = ','.join(sql_command_list) # turn the list type data into string with comma to seperate each value
         print("current command is: " + sql_command_string + "\n")
         redisClient.lpush("sql_command", str(sql_command_string)) 
@@ -227,7 +222,7 @@ def deleteTable():
     r = request
     try:
         # drop the two tables we created
-        sql_command_list = ["DROP", tableName]
+        sql_command_list = ["DROP"]
         sql_command_string = ','.join(sql_command_list) # turn the list type data into string with comma to seperate each value
         print("current command is: " + sql_command_string + "\n")
         redisClient.lpush("sql_command", str(sql_command_string)) 
