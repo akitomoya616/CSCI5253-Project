@@ -14,3 +14,9 @@ kubectl apply -f logs/logs-deployment.yaml
 kubectl apply -f worker/worker-deployment.yaml
 
 
+# for deployment deletion:
+
+# kubectl delete deployment,svc mysql
+# kubectl delete pvc mysql-pv-claim
+# kubectl delete pv mysql-pv-volume
+# kubectl delete secret mysql-secret

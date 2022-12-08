@@ -22,3 +22,10 @@ kubectl apply -f sql/mysql-deployment.yaml
 
 kubectl port-forward --address 0.0.0.0 service/redis 6379:6379 &
 kubectl port-forward service/mysql 3306:3306 &
+
+# for deployment deletion:
+
+# kubectl delete deployment,svc mysql
+# kubectl delete pvc mysql-pv-claim
+# kubectl delete pv mysql-pv-volume
+# kubectl delete secret mysql-secret

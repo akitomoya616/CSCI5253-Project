@@ -6,4 +6,6 @@ A shopping history collector that take shopping receipt from user, receive comma
 
 Proposal can be found in [Project Proposal](documents/proposal/Project%20Proposal.pdf)
 
-Project write-up can be found in [Project Written Report](documents/proposal/Project%20Proposal.pdf)
+Project write-up can be found in [Project Written Report](documents/report/CSCI5253-Final-Project-Write-Up.pdf)
+
+Project presentation slide can be found in [Project Report Slide](documents/report/CSCI5253-Final-Presentation.pptx)
