@@ -9,3 +9,5 @@ Proposal can be found in [Project Proposal](documents/proposal/Project%20Proposa
 Project write-up can be found in [Project Written Report](documents/report/CSCI5253-Final-Project-Write-Up.pdf)
 
 Project presentation slide can be found in [Project Report Slide](documents/report/CSCI5253-Final-Presentation.pptx)
+
+Recorded project presentation together with the live demo can be found on [Youtube](https://youtu.be/mZ9bLJMjKEE)
