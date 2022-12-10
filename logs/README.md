@@ -1,4 +1,4 @@
-# Logging README
+# Logging 
 
 We've provided you a Dockerfile and deployment for a logging service.
 
