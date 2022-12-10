@@ -1,4 +1,4 @@
-# REST API and interface
+# REST API & Interface
 
 REST server that take requests and data from REST client, grab all the necessary data for forming the SQL query needed by the request and lpush it to REDIS with tag `sql_command`.
 

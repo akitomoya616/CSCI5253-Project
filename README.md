@@ -19,4 +19,4 @@ To get the project up and running, please follow the instructions in the README 
 To add more logs in any program, please reference [log's README](logs/README.md) and check its current application approach in [worker.py](worker/worker.py).
 
 ## Deployment
-All the necessary deployment command has been written in [deploy-all script for GKE](deploy-all.sh) and [deploy-all script for local environment](deploy-local-dev.sh). To run it on GKE, please type `chmod 777 deploy-all.sh` in the terminal first in order to allow Google Cloud accept script and then run `./deploy-all.sh` in the root directory.
+All the necessary deployment command has been written in [deploy-all script for GKE](deploy-all.sh) and [deploy-all script for local environment](deploy-local-dev.sh). You can also use [this deployment deletion script](delete-all.sh) to delete all the deployment at once. To run it on GKE, please type `chmod 777 deploy-all.sh` in the terminal first in order to allow Google Cloud accept script and then run `./deploy-all.sh` in the root directory.
